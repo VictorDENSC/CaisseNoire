@@ -1,0 +1,8 @@
+[package]
+name = "caisse_noire"
+version = "0.1.0"
+authors = ["Victor Domecq <vdomecq@ensc.fr>"]
+edition = "2018"
+
+[dependencies]
+rouille = "3.0.0"
