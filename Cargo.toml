@@ -6,3 +6,6 @@ edition = "2018"
 
 [dependencies]
 rouille = "3.0.0"
+diesel = { version = "1.4.2", features = ["postgres", "uuidv07"] }
+dotenv = "0.14.1"
+uuid = {version="0.7.4", features = ["v4"]}
