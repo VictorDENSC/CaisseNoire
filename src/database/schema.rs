@@ -1,6 +1,7 @@
 table! {
-    api_keys (id) {
+    teams (id) {
         id -> Uuid,
-        apikey -> Bytea,
+        name -> Varchar,
+        rules -> Array<Jsonb>,
     }
 }
