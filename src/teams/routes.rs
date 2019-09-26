@@ -12,7 +12,7 @@ pub fn handle_request<T: TeamsDb>(request: &Request, db: T) -> Result<Team, Erro
         (POST) (/teams) => {
             let input: Team = json_input::<UpdateTeamRequest>(request)?.into();
 
-            let result: Team = db.create_team(input)?;
+            let result: Team = db.create_team(&input)?;
 
             Ok(result)
         },
@@ -24,7 +24,7 @@ pub fn handle_request<T: TeamsDb>(request: &Request, db: T) -> Result<Team, Erro
         (POST) (/teams/{id:Uuid}) => {
             let input: UpdateTeam = json_input::<UpdateTeamRequest>(request)?.into();
 
-            let result: Team = db.update_team(id, input)?;
+            let result: Team = db.update_team(id, &input)?;
 
             Ok(result)
         },
@@ -62,20 +62,20 @@ mod tests {
             }
         }
 
-        fn create_team(&self, team: Team) -> Result<Team, DbError> {
+        fn create_team(&self, team: &Team) -> Result<Team, DbError> {
             match self {
-                TeamsDbMock::Success => Ok(team),
+                TeamsDbMock::Success => Ok(team.clone()),
                 TeamsDbMock::Unknown => Err(DbError::Unknown),
                 _ => unimplemented!(),
             }
         }
 
-        fn update_team(&self, id: Uuid, team: UpdateTeam) -> Result<Team, DbError> {
+        fn update_team(&self, id: Uuid, team: &UpdateTeam) -> Result<Team, DbError> {
             match self {
                 TeamsDbMock::Success => Ok(Team {
                     id,
-                    name: team.name,
-                    rules: team.rules,
+                    name: team.name.clone(),
+                    rules: team.rules.clone(),
                 }),
                 TeamsDbMock::NotFound => Err(DbError::NotFound),
                 TeamsDbMock::Unknown => Err(DbError::Unknown),

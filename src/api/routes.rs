@@ -14,12 +14,5 @@ where
 }
 
 pub fn handle_request<T: TeamsDb>(request: &Request, db: T) -> Response {
-    find_route!(
-        extract_response(teams_handling(request, db)),
-        extract_response(test())
-    )
-}
-
-pub fn test() -> Result<String, ErrorResponse> {
-    Ok(String::from("Hey"))
+    find_route!(extract_response(teams_handling(request, db)))
 }

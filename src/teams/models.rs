@@ -8,7 +8,7 @@ use crate::database::schema::teams;
 #[derive(Serialize, Deserialize)]
 pub struct UpdateTeamRequest {
     pub name: String,
-    pub rules: Vec<Rules>,
+    pub rules: Vec<Rule>,
 }
 
 impl From<UpdateTeamRequest> for Team {
@@ -30,37 +30,37 @@ impl From<UpdateTeamRequest> for UpdateTeam {
     }
 }
 
-#[derive(Debug, Queryable, Insertable, Serialize, PartialEq)]
+#[derive(Debug, Queryable, Insertable, Serialize, PartialEq, Clone)]
 #[table_name = "teams"]
 pub struct Team {
     pub id: Uuid,
     pub name: String,
-    pub rules: Vec<Rules>,
+    pub rules: Vec<Rule>,
 }
 
 #[derive(AsChangeset)]
 #[table_name = "teams"]
 pub struct UpdateTeam {
     pub name: String,
-    pub rules: Vec<Rules>,
+    pub rules: Vec<Rule>,
 }
 
-#[derive(AsJsonb, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Rules {
+#[derive(AsJsonb, Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct Rule {
     pub name: String,
     pub category: RuleCategory,
     pub description: String,
     pub kind: RuleKind,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum RuleCategory {
     GameDay,
     TrainingDay,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum RuleKind {
     Basic {
@@ -71,14 +71,14 @@ pub enum RuleKind {
     },
     BasedOnTime {
         price_per_time_unit: f32,
-        unit: TimeUnit,
+        time_unit: TimeUnit,
     },
     EachTimeInterval {
         price: f32,
     },
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum TimeUnit {
     Seconds,

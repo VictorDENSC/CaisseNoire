@@ -2,7 +2,7 @@ use diesel::pg::PgConnection;
 use r2d2_diesel::ConnectionManager;
 use std::ops::Deref;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum DbError {
     ServiceUnavailable,
     NotFound,
@@ -38,5 +38,18 @@ impl Deref for DbConnection {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+pub mod test_utils {
+    use super::*;
+
+    pub struct DbConnectionBuilder;
+
+    impl DbConnectionBuilder {
+        pub fn new() -> DbConnection {
+            init_db_connection("postgres://postgres:password@localhost/caisse_noire")
+                .expect("Something went wrong while getting the connection")
+        }
     }
 }
