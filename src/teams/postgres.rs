@@ -1,39 +1,150 @@
 use diesel::prelude::*;
+use std::ops::Deref;
 use uuid::Uuid;
 
-use super::database::{
-    postgres::{Database, DbError},
-    schema::teams,
-};
 use super::interface::TeamsDb;
 use super::models::{Team, UpdateTeam};
+use crate::database::{
+    postgres::{DbConnection, DbError},
+    schema::teams,
+};
 
-impl TeamsDb for Database {
+impl TeamsDb for DbConnection {
     fn get_team_by_id(&self, id: Uuid) -> Result<Team, DbError> {
-        let conn = self.get_connection()?;
-
-        let team: Team = teams::table.find(id).get_result::<Team>(&*conn)?;
+        let team: Team = teams::table.find(id).get_result::<Team>(self.deref())?;
 
         Ok(team)
     }
 
-    fn create_team(&self, team: Team) -> Result<Team, DbError> {
-        let conn = self.get_connection()?;
-
+    fn create_team(&self, team: &Team) -> Result<Team, DbError> {
         let team: Team = diesel::insert_into(teams::table)
             .values(team)
-            .get_result(&*conn)?;
+            .get_result(self.deref())?;
 
         Ok(team)
     }
 
-    fn update_team(&self, id: Uuid, team: UpdateTeam) -> Result<Team, DbError> {
-        let conn = self.get_connection()?;
-
+    fn update_team(&self, id: Uuid, team: &UpdateTeam) -> Result<Team, DbError> {
         let team: Team = diesel::update(teams::table.find(id))
-            .set(&team)
-            .get_result(&*conn)?;
+            .set(team)
+            .get_result(self.deref())?;
 
         Ok(team)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use diesel::result::Error;
+
+    use super::super::models::{Rule, RuleCategory, RuleKind, TimeUnit};
+    use super::*;
+    use crate::database::postgres::test_utils::DbConnectionBuilder;
+
+    #[test]
+    fn test_get_team() {
+        let conn = DbConnectionBuilder::new();
+
+        conn.deref().test_transaction::<_, Error, _>(|| {
+            let new_team = Team {
+                id: Uuid::new_v4(),
+                name: String::from("Test_team"),
+                rules: vec![],
+            };
+
+            diesel::insert_into(teams::table)
+                .values(&new_team)
+                .execute(conn.deref())?;
+
+            let team = conn.get_team_by_id(new_team.id).unwrap();
+
+            assert_eq!(team, new_team);
+
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_get_unexisting_team() {
+        let conn = DbConnectionBuilder::new();
+
+        let error = conn.get_team_by_id(Uuid::new_v4()).unwrap_err();
+
+        assert_eq!(error, DbError::NotFound);
+    }
+
+    #[test]
+    fn test_create_team() {
+        let conn = DbConnectionBuilder::new();
+
+        conn.deref().test_transaction::<_, Error, _>(|| {
+            let team = Team {
+                id: Uuid::new_v4(),
+                name: String::from("Team_Test"),
+                rules: vec![Rule {
+                    name: String::from("Rule_Test"),
+                    category: RuleCategory::TrainingDay,
+                    description: String::from("This is a description !"),
+                    kind: RuleKind::BasedOnTime {
+                        price_per_time_unit: 0.2,
+                        time_unit: TimeUnit::Minutes,
+                    },
+                }],
+            };
+
+            let team_created = conn.create_team(&team).unwrap();
+
+            assert_eq!(team_created, team);
+
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_update_team() {
+        let conn = DbConnectionBuilder::new();
+
+        conn.deref().test_transaction::<_, Error, _>(|| {
+            let new_team = Team {
+                id: Uuid::new_v4(),
+                name: String::from("Test_team"),
+                rules: vec![],
+            };
+
+            diesel::insert_into(teams::table)
+                .values(&new_team)
+                .execute(conn.deref())?;
+
+            let team = conn
+                .update_team(
+                    new_team.id,
+                    &UpdateTeam {
+                        name: String::from("New name"),
+                        rules: new_team.rules,
+                    },
+                )
+                .unwrap();
+
+            assert_eq!(&team.name, "New name");
+
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_update_unexisting_team() {
+        let conn = DbConnectionBuilder::new();
+
+        let error = conn
+            .update_team(
+                Uuid::new_v4(),
+                &UpdateTeam {
+                    name: String::from(""),
+                    rules: vec![],
+                },
+            )
+            .unwrap_err();
+
+        assert_eq!(error, DbError::NotFound);
     }
 }
