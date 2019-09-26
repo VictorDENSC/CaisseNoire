@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use super::database::postgres::DbError;
+use crate::database::postgres::DbError;
 use super::models::{Team, UpdateTeam};
 
 pub trait TeamsDb {

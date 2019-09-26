@@ -3,7 +3,7 @@ use diesel_as_jsonb::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::database::schema::teams;
+use crate::database::schema::teams;
 
 #[derive(Deserialize)]
 pub struct UpdateTeamRequest {
@@ -11,26 +11,26 @@ pub struct UpdateTeamRequest {
     pub rules: Vec<Rules>,
 }
 
-impl Into<Team> for UpdateTeamRequest {
-    fn into(self) -> Team {
+impl From<UpdateTeamRequest> for Team {
+    fn from(update_request: UpdateTeamRequest) -> Team {
         Team {
             id: Uuid::new_v4(),
-            name: self.name,
-            rules: self.rules,
+            name: update_request.name,
+            rules: update_request.rules,
         }
     }
 }
 
-impl Into<UpdateTeam> for UpdateTeamRequest {
-    fn into(self) -> UpdateTeam {
+impl From<UpdateTeamRequest> for UpdateTeam {
+    fn from(update_request: UpdateTeamRequest) -> UpdateTeam {
         UpdateTeam {
-            name: self.name,
-            rules: self.rules,
+            name: update_request.name,
+            rules: update_request.rules,
         }
     }
 }
 
-#[derive(Queryable, Insertable, Serialize)]
+#[derive(Debug, Queryable, Insertable, Serialize, PartialEq)]
 #[table_name = "teams"]
 pub struct Team {
     pub id: Uuid,
@@ -45,7 +45,7 @@ pub struct UpdateTeam {
     pub rules: Vec<Rules>,
 }
 
-#[derive(AsJsonb, Debug, Serialize, Deserialize)]
+#[derive(AsJsonb, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Rules {
     pub name: String,
     pub category: RuleCategory,
@@ -53,14 +53,14 @@ pub struct Rules {
     pub kind: RuleKind,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum RuleCategory {
     GameDay,
     TrainingDay,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum RuleKind {
     Basic {
@@ -78,7 +78,7 @@ pub enum RuleKind {
     },
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum TimeUnit {
     Seconds,

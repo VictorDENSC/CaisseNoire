@@ -1,46 +1,42 @@
-use diesel::{pg::PgConnection, result::Error};
-use r2d2::{Pool, PooledConnection};
+use diesel::pg::PgConnection;
 use r2d2_diesel::ConnectionManager;
+use std::ops::Deref;
 
+#[derive(Debug)]
 pub enum DbError {
-    PoolBuilding,
-    ConnectionAccess,
+    ServiceUnavailable,
     NotFound,
     Unknown,
 }
 
-impl From<Error> for DbError {
-    fn from(error: Error) -> DbError {
+impl From<r2d2::Error> for DbError {
+    fn from(_: r2d2::Error) -> DbError {
+        DbError::ServiceUnavailable
+    }
+}
+
+impl From<diesel::result::Error> for DbError {
+    fn from(error: diesel::result::Error) -> DbError {
         match error {
-            Error::NotFound => DbError::NotFound,
+            diesel::result::Error::NotFound => DbError::NotFound,
             _ => DbError::Unknown,
         }
     }
 }
 
-pub struct Database {
-    pool: Option<Pool<ConnectionManager<PgConnection>>>,
+pub fn init_db_connection(database_url: &str) -> Result<DbConnection, DbError> {
+    let manager = ConnectionManager::<PgConnection>::new(database_url);
+    let pool = r2d2::Pool::new(manager)?;
+    let connection = pool.get()?;
+    Ok(DbConnection(connection))
 }
 
-impl Database {
-    pub fn connect(database_url: &str) -> Self {
-        let manager = ConnectionManager::<PgConnection>::new(database_url);
+pub struct DbConnection(r2d2::PooledConnection<ConnectionManager<PgConnection>>);
 
-        match Pool::builder().build(manager) {
-            Ok(pool) => Database { pool: Some(pool) },
-            Err(_) => Database { pool: None },
-        }
-    }
+impl Deref for DbConnection {
+    type Target = PgConnection;
 
-    pub fn get_connection(
-        &self,
-    ) -> Result<PooledConnection<ConnectionManager<PgConnection>>, DbError> {
-        match &self.pool {
-            Some(pool) => match pool.get() {
-                Ok(connection) => Ok(connection),
-                Err(_) => Err(DbError::ConnectionAccess),
-            },
-            None => Err(DbError::PoolBuilding),
-        }
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
