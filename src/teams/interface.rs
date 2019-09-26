@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
-use crate::database::postgres::DbError;
 use super::models::{Team, UpdateTeam};
+use crate::database::postgres::DbError;
 
 pub trait TeamsDb {
     fn get_team_by_id(&self, id: Uuid) -> Result<Team, DbError>;

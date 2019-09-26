@@ -119,7 +119,7 @@ mod tests {
     #[test]
     fn test_create_team() {
         let team = UpdateTeamRequest {
-            name: String::from("Test_team1"),
+            name: String::from("Test_team"),
             rules: vec![],
         };
 
@@ -132,56 +132,61 @@ mod tests {
         assert_eq!(response.name, team.name);
     }
 
-    // #[test]
-    // fn test_create_team_fails() {
-    //     let id = Uuid::new_v4();
+    #[test]
+    fn test_create_team_fails() {
+        let team = UpdateTeamRequest {
+            name: String::from("Test_team"),
+            rules: vec![],
+        };
 
-    //     let error = handle_request(
-    //         &Request::fake_http("POST", "/teams", vec![], vec![]),
-    //         &TeamsDbMock::Unknown,
-    //     )
-    //     .unwrap_err();
+        let error = handle_request(
+            &RequestBuilder::post(String::from("/teams"), &team).unwrap(),
+            TeamsDbMock::Unknown,
+        )
+        .unwrap_err();
 
-    //     assert_eq!(error.kind, ErrorKind::Unknown)
-    // }
+        assert_eq!(error.kind, ErrorKind::Unknown)
+    }
 
-    // #[test]
-    // fn test_update_team() {
-    //     let id = Uuid::new_v4();
-    //     let response = handle_request(
-    //         &Request::fake_http("GET", format!("/teams/{}", id), vec![], vec![]),
-    //         &TeamsDbMock::Success,
-    //     )
-    //     .unwrap();
+    #[test]
+    fn test_update_team() {
+        let id = Uuid::new_v4();
+        let team = UpdateTeamRequest {
+            name: String::from("Test_team"),
+            rules: vec![],
+        };
 
-    //     assert_eq!(
-    //         response,
-    //         SuccessResponse::Team(Team {
-    //             id,
-    //             name: String::from("Test_team"),
-    //             rules: vec![],
-    //         })
-    //     );
-    // }
+        let response = handle_request(
+            &RequestBuilder::post(format!("/teams/{}", id), &team).unwrap(),
+            TeamsDbMock::Success,
+        )
+        .unwrap();
 
-    // #[test]
-    // fn test_update_team_fails() {
-    //     let id = Uuid::new_v4();
+        assert_eq!(response.id, id);
+    }
 
-    //     let error = handle_request(
-    //         &Request::fake_http("POST", format!("/teams/{}", id), vec![], Team ),
-    //         &TeamsDbMock::NotFound,
-    //     )
-    //     .unwrap_err();
+    #[test]
+    fn test_update_team_fails() {
+        let id = Uuid::new_v4();
+        let team = UpdateTeamRequest {
+            name: String::from("Test_team"),
+            rules: vec![],
+        };
 
-    //     assert_eq!(error.kind, ErrorKind::NotFound);
+        let error = handle_request(
+            &RequestBuilder::post(format!("/teams/{}", id), &team).unwrap(),
+            TeamsDbMock::NotFound,
+        )
+        .unwrap_err();
 
-    //     let error = handle_request(
-    //         &Request::fake_http("POST", format!("/teams/{}", id), vec![], vec![]),
-    //         &TeamsDbMock::Unknown,
-    //     )
-    //     .unwrap_err();
+        assert_eq!(error.kind, ErrorKind::NotFound);
 
-    //     assert_eq!(error.kind, ErrorKind::Unknown);
-    // }
+        let error = handle_request(
+            &RequestBuilder::post(format!("/teams/{}", id), &team).unwrap(),
+            TeamsDbMock::Unknown,
+        )
+        .unwrap_err();
+
+        assert_eq!(error.kind, ErrorKind::Unknown);
+    }
 }
