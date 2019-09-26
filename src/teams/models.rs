@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::database::schema::teams;
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct UpdateTeamRequest {
     pub name: String,
     pub rules: Vec<Rules>,

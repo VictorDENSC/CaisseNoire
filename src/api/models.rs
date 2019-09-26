@@ -2,20 +2,6 @@ use rouille::input::json::JsonError;
 use serde::Serialize;
 
 use crate::database::postgres::DbError;
-use crate::teams::models::Team;
-
-#[derive(Debug, Serialize, PartialEq)]
-#[serde(untagged)]
-pub enum SuccessResponse {
-    Team(Team),
-    Text(String),
-}
-
-impl From<SuccessResponse> for rouille::Response {
-    fn from(response: SuccessResponse) -> rouille::Response {
-        rouille::Response::json(&response)
-    }
-}
 
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
@@ -75,4 +61,37 @@ impl From<JsonError> for ErrorResponse {
             description: error.to_string(),
         }
     }
+}
+
+pub mod test_utils {
+    use rouille::Request;
+    use serde::Serialize;
+
+    pub struct RequestBuilder;
+
+    impl RequestBuilder {
+        fn json_header() -> (String, String) {
+            ("Content-Type".to_string(), "application/json".to_string())
+        }
+
+        pub fn get(url: String) -> Request {
+            Request::fake_http("GET", url, vec![RequestBuilder::json_header()], vec![])
+        }
+
+        pub fn post<T>(url: String, data: &T) -> Result<Request, ()>
+        where
+            T: Serialize,
+        {
+            match serde_json::to_vec(data) {
+                Ok(serialized_data) => Ok(Request::fake_http(
+                    "POST",
+                    url,
+                    vec![RequestBuilder::json_header()],
+                    serialized_data,
+                )),
+                Err(_) => Err(()),
+            }
+        }
+    }
+
 }
