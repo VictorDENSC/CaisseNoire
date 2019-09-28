@@ -1,11 +1,11 @@
 use rouille::{input::json::json_input, router, Request};
 use uuid::Uuid;
 
-use crate::api::models::{ErrorKind, ErrorResponse};
 use super::{
     interface::TeamsDb,
     models::{Team, UpdateTeam, UpdateTeamRequest},
 };
+use crate::api::models::{ErrorKind, ErrorResponse};
 
 pub fn handle_request<T: TeamsDb>(request: &Request, db: T) -> Result<Team, ErrorResponse> {
     router!(request,

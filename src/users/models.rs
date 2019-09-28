@@ -3,15 +3,15 @@ use uuid::Uuid;
 
 use crate::database::schema::users;
 
-#[derive(Queryable, Insertable)]
+#[derive(Debug, Queryable, Insertable, PartialEq)]
 #[table_name = "users"]
 pub struct User {
-    id: Uuid,
-    team_id: Uuid,
-    firstname: String,
-    lastname: String,
-    nickname: Option<String>,
-    login: String,
-    password: String,
-    email: Option<String>
+    pub id: Uuid,
+    pub team_id: Uuid,
+    pub firstname: String,
+    pub lastname: String,
+    pub nickname: Option<String>,
+    pub login: String,
+    pub password: String,
+    pub email: Option<String>,
 }
