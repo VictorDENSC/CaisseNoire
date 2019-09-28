@@ -1,7 +1,7 @@
 use rouille::{input::json::json_input, router, Request};
 use uuid::Uuid;
 
-use super::api::models::{ErrorKind, ErrorResponse};
+use crate::api::models::{ErrorKind, ErrorResponse};
 use super::{
     interface::TeamsDb,
     models::{Team, UpdateTeam, UpdateTeamRequest},
