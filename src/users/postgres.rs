@@ -47,8 +47,9 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_user = create_default_user(&conn, "login", "password");
-            create_default_user(&conn, "login_2", "password_2");
+            let new_user = create_default_user(&conn, "login");
+
+            create_default_user(&conn, "login_2");
 
             let users = conn.get_users(new_user.team_id).unwrap();
 
@@ -63,7 +64,7 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_user = create_default_user(&conn, "login", "password");
+            let new_user = create_default_user(&conn, "login");
 
             let user = conn.get_user_by_id(new_user.team_id, new_user.id).unwrap();
 
@@ -113,22 +114,44 @@ mod tests {
     #[test]
     fn test_create_uncorrect_user() {
         let conn = DbConnectionBuilder::new();
-    
+
+        let mut user = User {
+            id: Uuid::new_v4(),
+            team_id: Uuid::new_v4(),
+            firstname: String::from("firstname"),
+            lastname: String::from("lastname"),
+            nickname: None,
+            login: String::from("login"),
+            password: String::from("password"),
+            email: None,
+        };
+
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let mut new_user = User {
-                id: Uuid::new_v4(),
-                team_id: Uuid::new_v4(),
-                firstname: String::from("firstname"),
-                lastname: String::from("lastname"),
-                nickname: None,
-                login: String::from("login"),
-                password: String::from("password"),
-                email: None,
-            };
+            let error = conn.create_user(&user).unwrap_err();
 
-            let error = conn.create_user(&new_user).unwrap_err();
+            assert_eq!(
+                error,
+                DbError::ForeignKeyViolation(String::from(
+                    "The key team_id doesn\'t refer to anything"
+                ))
+            );
 
-            assert_eq!(error, DbError::Unknown);
+            Ok(())
+        });
+
+        conn.deref().test_transaction::<_, Error, _>(|| {
+            let default_user = create_default_user(&conn, "login");
+
+            user.team_id = default_user.team_id;
+
+            let error = conn.create_user(&user).unwrap_err();
+
+            assert_eq!(
+                error,
+                DbError::UniqueViolation(String::from(
+                    "The field login is already used by another user"
+                ))
+            );
 
             Ok(())
         })

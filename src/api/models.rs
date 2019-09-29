@@ -16,6 +16,7 @@ pub enum ErrorKind {
     Unknown,
     NotFound,
     Json,
+    NotAllowed,
 }
 
 impl ErrorKind {
@@ -25,6 +26,7 @@ impl ErrorKind {
             ErrorKind::Unknown => 500,
             ErrorKind::NotFound => 404,
             ErrorKind::Json => 400,
+            ErrorKind::NotAllowed => 400,
         }
     }
 }
@@ -49,6 +51,14 @@ impl From<DbError> for ErrorResponse {
             DbError::ServiceUnavailable => ErrorResponse {
                 kind: ErrorKind::ServiceUnavailable,
                 description: String::from("The service is currently unavailable"),
+            },
+            DbError::ForeignKeyViolation(description) => ErrorResponse {
+                kind: ErrorKind::NotAllowed,
+                description,
+            },
+            DbError::UniqueViolation(description) => ErrorResponse {
+                kind: ErrorKind::NotAllowed,
+                description,
             },
         }
     }

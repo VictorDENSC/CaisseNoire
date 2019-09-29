@@ -6,8 +6,8 @@ use std::ops::Deref;
 pub enum DbError {
     ServiceUnavailable,
     NotFound,
-    ForeignKeyViolation,
-    UniqueViolation,
+    ForeignKeyViolation(String),
+    UniqueViolation(String),
     Unknown,
 }
 
@@ -19,14 +19,27 @@ impl From<r2d2::Error> for DbError {
 
 impl From<diesel::result::Error> for DbError {
     fn from(error: diesel::result::Error) -> DbError {
-        println!("{:?}", error);
         match error {
             diesel::result::Error::NotFound => DbError::NotFound,
-            //TODO
-            diesel::result::Error::DatabaseError(kind, _information) => match kind {
-                diesel::result::DatabaseErrorKind::ForeignKeyViolation => DbError::ForeignKeyViolation,
-                diesel::result::DatabaseErrorKind::UniqueViolation => DbError::UniqueViolation,
-                _ => DbError::Unknown
+            diesel::result::Error::DatabaseError(kind, information) => match kind {
+                diesel::result::DatabaseErrorKind::ForeignKeyViolation => {
+                    DbError::ForeignKeyViolation(match information.constraint_name() {
+                        Some(constraint_name) => {
+                            format!("The key {} doesn't refer to anything", constraint_name,)
+                        }
+                        None => String::from("An error occured due to a foreign key violation"),
+                    })
+                }
+                diesel::result::DatabaseErrorKind::UniqueViolation => {
+                    DbError::UniqueViolation(match information.constraint_name() {
+                        Some(constraint_name) => format!(
+                            "The field {} is already used by another user",
+                            constraint_name,
+                        ),
+                        None => String::from("An error occured due to a unique violation"),
+                    })
+                }
+                _ => DbError::Unknown,
             },
             _ => DbError::Unknown,
         }
@@ -81,7 +94,7 @@ pub mod test_utils {
             .expect("Failed to create default team")
     }
 
-    pub fn create_default_user(conn: &DbConnection, login: &str, password: &str) -> User {
+    pub fn create_default_user(conn: &DbConnection, login: &str) -> User {
         let default_team = create_default_team(conn);
 
         let default_user = User {
@@ -91,7 +104,7 @@ pub mod test_utils {
             lastname: String::from("lastname"),
             nickname: None,
             login: String::from(login),
-            password: String::from(password),
+            password: String::from("password"),
             email: None,
         };
 
