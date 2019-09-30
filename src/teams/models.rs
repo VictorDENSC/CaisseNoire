@@ -5,18 +5,23 @@ use uuid::Uuid;
 
 use crate::database::schema::teams;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct UpdateTeamRequest {
+    pub id: Option<Uuid>,
     pub name: String,
-    pub rules: Vec<Rule>,
+    pub rules: Vec<UpdateRuleRequest>,
 }
 
 impl From<UpdateTeamRequest> for Team {
     fn from(update_request: UpdateTeamRequest) -> Team {
         Team {
-            id: Uuid::new_v4(),
+            id: update_request.id.unwrap_or(Uuid::new_v4()),
             name: update_request.name,
-            rules: update_request.rules,
+            rules: update_request
+                .rules
+                .into_iter()
+                .map(|update_rule_request| update_rule_request.into())
+                .collect(),
         }
     }
 }
@@ -25,7 +30,11 @@ impl From<UpdateTeamRequest> for UpdateTeam {
     fn from(update_request: UpdateTeamRequest) -> UpdateTeam {
         UpdateTeam {
             name: update_request.name,
-            rules: update_request.rules,
+            rules: update_request
+                .rules
+                .into_iter()
+                .map(|update_rule_request| update_rule_request.into())
+                .collect(),
         }
     }
 }
@@ -45,8 +54,30 @@ pub struct UpdateTeam {
     pub rules: Vec<Rule>,
 }
 
+#[derive(Deserialize)]
+pub struct UpdateRuleRequest {
+    pub id: Option<Uuid>,
+    pub name: String,
+    pub category: RuleCategory,
+    pub description: String,
+    pub kind: RuleKind,
+}
+
+impl From<UpdateRuleRequest> for Rule {
+    fn from(update_request: UpdateRuleRequest) -> Rule {
+        Rule {
+            id: update_request.id.unwrap_or(Uuid::new_v4()),
+            name: update_request.name,
+            category: update_request.category,
+            description: update_request.description,
+            kind: update_request.kind,
+        }
+    }
+}
+
 #[derive(AsJsonb, Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Rule {
+    pub id: Uuid,
     pub name: String,
     pub category: RuleCategory,
     pub description: String,

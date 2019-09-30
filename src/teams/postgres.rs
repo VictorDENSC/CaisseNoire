@@ -76,6 +76,7 @@ mod tests {
                 id: Uuid::new_v4(),
                 name: String::from("Team_Test"),
                 rules: vec![Rule {
+                    id: Uuid::new_v4(),
                     name: String::from("Rule_Test"),
                     category: RuleCategory::TrainingDay,
                     description: String::from("This is a description !"),

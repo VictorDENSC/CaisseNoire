@@ -6,6 +6,7 @@ use crate::database::schema::users;
 
 #[derive(Serialize, Deserialize)]
 pub struct UpdateUserRequest {
+    pub id: Option<Uuid>,
     pub firstname: String,
     pub lastname: String,
     pub nickname: Option<String>,
@@ -18,7 +19,7 @@ pub struct UpdateUserRequest {
 impl From<(UpdateUserRequest, Uuid)> for User {
     fn from((update_request, team_id): (UpdateUserRequest, Uuid)) -> User {
         User {
-            id: Uuid::new_v4(),
+            id: update_request.id.unwrap_or(Uuid::new_v4()),
             team_id,
             firstname: update_request.firstname,
             lastname: update_request.lastname,
