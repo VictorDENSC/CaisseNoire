@@ -106,6 +106,7 @@ pub mod test_utils {
             login: String::from(login),
             password: String::from("password"),
             email: None,
+            is_admin: false
         };
 
         diesel::insert_into(users::table)

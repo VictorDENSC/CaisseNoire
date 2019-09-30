@@ -120,6 +120,7 @@ mod tests {
                 login: String::from("login"),
                 password: String::from("password"),
                 email: None,
+                is_admin: false,
             };
 
             let user = conn.create_user(&new_user).unwrap();
@@ -143,6 +144,7 @@ mod tests {
             login: String::from("login"),
             password: String::from("password"),
             email: None,
+            is_admin: false,
         };
 
         conn.deref().test_transaction::<_, Error, _>(|| {
@@ -194,6 +196,7 @@ mod tests {
                         login: default_user.login,
                         password: default_user.password,
                         email: default_user.email,
+                        is_admin: false,
                     },
                 )
                 .unwrap();
@@ -220,6 +223,7 @@ mod tests {
                     login: String::from("login"),
                     password: String::from("password"),
                     email: None,
+                    is_admin: false,
                 },
             )
             .unwrap_err();

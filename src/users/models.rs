@@ -14,6 +14,7 @@ pub struct User {
     pub login: String,
     pub password: String,
     pub email: Option<String>,
+    pub is_admin: bool,
 }
 
 #[derive(AsChangeset)]
@@ -25,4 +26,5 @@ pub struct UpdateUser {
     pub login: String,
     pub password: String,
     pub email: Option<String>,
+    pub is_admin: bool,
 }
