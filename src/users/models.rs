@@ -15,3 +15,14 @@ pub struct User {
     pub password: String,
     pub email: Option<String>,
 }
+
+#[derive(AsChangeset)]
+#[table_name = "users"]
+pub struct UpdateUser {
+    pub firstname: String,
+    pub lastname: String,
+    pub nickname: Option<String>,
+    pub login: String,
+    pub password: String,
+    pub email: Option<String>,
+}

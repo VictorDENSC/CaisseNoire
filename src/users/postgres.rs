@@ -2,7 +2,10 @@ use diesel::prelude::*;
 use std::ops::Deref;
 use uuid::Uuid;
 
-use super::{interface::UsersDb, models::User};
+use super::{
+    interface::UsersDb,
+    models::{UpdateUser, User},
+};
 use crate::database::{
     postgres::{DbConnection, DbError},
     schema::users,
@@ -29,6 +32,22 @@ impl UsersDb for DbConnection {
         let user: User = diesel::insert_into(users::table)
             .values(user)
             .get_result(self.deref())?;
+
+        Ok(user)
+    }
+
+    fn update_user(
+        &self,
+        team_id: Uuid,
+        user_id: Uuid,
+        user: &UpdateUser,
+    ) -> Result<User, DbError> {
+        let user: User = diesel::update(
+            users::table.filter(users::team_id.eq(team_id).and(users::id.eq(user_id))),
+        )
+        .set(user)
+        .get_result(self.deref())?;
+
         Ok(user)
     }
 }
@@ -155,5 +174,56 @@ mod tests {
 
             Ok(())
         })
+    }
+
+    #[test]
+    fn test_update_user() {
+        let conn = DbConnectionBuilder::new();
+
+        conn.deref().test_transaction::<_, Error, _>(|| {
+            let default_user = create_default_user(&conn, "login");
+
+            let user = conn
+                .update_user(
+                    default_user.team_id,
+                    default_user.id,
+                    &UpdateUser {
+                        firstname: String::from("name"),
+                        lastname: default_user.lastname,
+                        nickname: default_user.nickname,
+                        login: default_user.login,
+                        password: default_user.password,
+                        email: default_user.email,
+                    },
+                )
+                .unwrap();
+
+            assert_eq!(user.firstname, String::from("name"));
+            assert_eq!(user.id, default_user.id);
+
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_update_unexisting_user() {
+        let conn = DbConnectionBuilder::new();
+
+        let error = conn
+            .update_user(
+                Uuid::new_v4(),
+                Uuid::new_v4(),
+                &UpdateUser {
+                    firstname: String::from("firstname"),
+                    lastname: String::from("lastname"),
+                    nickname: None,
+                    login: String::from("login"),
+                    password: String::from("password"),
+                    email: None,
+                },
+            )
+            .unwrap_err();
+
+        assert_eq!(error, DbError::NotFound);
     }
 }

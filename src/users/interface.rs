@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use super::models::User;
+use super::models::{UpdateUser, User};
 use crate::database::postgres::DbError;
 
 pub trait UsersDb {
@@ -10,5 +10,6 @@ pub trait UsersDb {
 
     fn create_user(&self, user: &User) -> Result<User, DbError>;
 
-    // fn update_user(&self, team_id: Uuid, user_id: Uuid, user: )
+    fn update_user(&self, team_id: Uuid, user_id: Uuid, user: &UpdateUser)
+        -> Result<User, DbError>;
 }
