@@ -2,16 +2,18 @@ use diesel::prelude::*;
 use std::ops::Deref;
 use uuid::Uuid;
 
-use super::interface::TeamsDb;
-use super::models::{Team, UpdateTeam};
+use super::{
+    interface::TeamsDb,
+    models::{Team, UpdateTeam},
+};
 use crate::database::{
     postgres::{DbConnection, DbError},
     schema::teams,
 };
 
 impl TeamsDb for DbConnection {
-    fn get_team_by_id(&self, id: Uuid) -> Result<Team, DbError> {
-        let team: Team = teams::table.find(id).get_result::<Team>(self.deref())?;
+    fn get_team(&self, id: Uuid) -> Result<Team, DbError> {
+        let team: Team = teams::table.find(id).get_result(self.deref())?;
 
         Ok(team)
     }
@@ -39,24 +41,16 @@ mod tests {
 
     use super::super::models::{Rule, RuleCategory, RuleKind, TimeUnit};
     use super::*;
-    use crate::database::postgres::test_utils::DbConnectionBuilder;
+    use crate::database::postgres::test_utils::{create_default_team, DbConnectionBuilder};
 
     #[test]
     fn test_get_team() {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_team = Team {
-                id: Uuid::new_v4(),
-                name: String::from("Test_team"),
-                rules: vec![],
-            };
+            let new_team = create_default_team(&conn);
 
-            diesel::insert_into(teams::table)
-                .values(&new_team)
-                .execute(conn.deref())?;
-
-            let team = conn.get_team_by_id(new_team.id).unwrap();
+            let team = conn.get_team(new_team.id).unwrap();
 
             assert_eq!(team, new_team);
 
@@ -68,7 +62,7 @@ mod tests {
     fn test_get_unexisting_team() {
         let conn = DbConnectionBuilder::new();
 
-        let error = conn.get_team_by_id(Uuid::new_v4()).unwrap_err();
+        let error = conn.get_team(Uuid::new_v4()).unwrap_err();
 
         assert_eq!(error, DbError::NotFound);
     }
@@ -105,15 +99,7 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_team = Team {
-                id: Uuid::new_v4(),
-                name: String::from("Test_team"),
-                rules: vec![],
-            };
-
-            diesel::insert_into(teams::table)
-                .values(&new_team)
-                .execute(conn.deref())?;
+            let new_team = create_default_team(&conn);
 
             let team = conn
                 .update_team(

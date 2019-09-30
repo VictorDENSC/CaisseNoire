@@ -25,7 +25,7 @@ fn main() {
     start_server(
         format!("0.0.0.0:{}", port),
         move |request| match init_db_connection(&database_url) {
-            Ok(db_connection) => handle_request(request, db_connection),
+            Ok(db_connection) => handle_request(request, &db_connection),
             Err(err) => {
                 let error_response: ErrorResponse = err.into();
                 error_response.into()
