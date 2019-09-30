@@ -69,6 +69,7 @@ pub mod test_utils {
 
     use super::super::schema::*;
     use super::*;
+    use crate::sanctions::models::{CreateSanction, Sanction, SanctionData, SanctionInfo};
     use crate::teams::models::Team;
     use crate::users::models::User;
 
@@ -113,5 +114,24 @@ pub mod test_utils {
             .values(&default_user)
             .get_result(conn.deref())
             .expect("Failed to create default user")
+    }
+
+    pub fn create_default_sanction(conn: &DbConnection) -> Sanction {
+        let default_user = create_default_user(conn, "login");
+
+        let default_sanction = CreateSanction {
+            id: Uuid::new_v4(),
+            user_id: default_user.id,
+            team_id: default_user.team_id,
+            sanction_info: SanctionInfo {
+                id: Uuid::new_v4(),
+                sanction_data: SanctionData::Basic,
+            },
+        };
+
+        diesel::insert_into(sanctions::table)
+            .values(&default_sanction)
+            .get_result(conn.deref())
+            .expect("Failed to create default sanction")
     }
 }

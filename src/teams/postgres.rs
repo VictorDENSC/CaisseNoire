@@ -80,7 +80,7 @@ mod tests {
                     name: String::from("Rule_Test"),
                     category: RuleCategory::TrainingDay,
                     description: String::from("This is a description !"),
-                    kind: RuleKind::BasedOnTime {
+                    kind: RuleKind::TimeMultiplication {
                         price_per_time_unit: 0.2,
                         time_unit: TimeUnit::Minutes,
                     },

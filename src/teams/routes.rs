@@ -127,7 +127,7 @@ mod tests {
                 "category": "TRAINING_DAY",
                 "description": "This is a description !",
                 "kind": {
-                    "BASED_ON_TIME": {
+                    "TIME_MULTIPLICATION": {
                         "price_per_time_unit": 0.2,
                         "time_unit": "MINUTES"
                     }

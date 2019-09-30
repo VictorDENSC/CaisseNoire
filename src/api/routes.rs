@@ -1,4 +1,5 @@
 use super::models::ErrorResponse;
+use crate::sanctions::interface::SanctionsDb;
 use crate::teams::{interface::TeamsDb, routes::handle_request as teams_request_handling};
 use crate::users::{interface::UsersDb, routes::handle_request as users_request_handling};
 use rouille::{find_route, Request, Response};
@@ -16,7 +17,7 @@ where
 
 pub fn handle_request<T>(request: &Request, db: &T) -> Response
 where
-    T: TeamsDb + UsersDb,
+    T: TeamsDb + UsersDb + SanctionsDb,
 {
     find_route!(
         extract_response(teams_request_handling(request, db)),
