@@ -1,4 +1,14 @@
 table! {
+    sanctions (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        team_id -> Uuid,
+        sanction_info -> Jsonb,
+        created_at -> Date,
+    }
+}
+
+table! {
     teams (id) {
         id -> Uuid,
         name -> Varchar,
@@ -18,9 +28,6 @@ table! {
     }
 }
 
-joinable!(users -> teams (team_id));
+joinable!(sanctions -> users (user_id));
 
-allow_tables_to_appear_in_same_query!(
-    teams,
-    users,
-);
+allow_tables_to_appear_in_same_query!(sanctions, teams, users,);
