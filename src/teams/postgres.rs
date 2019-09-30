@@ -12,7 +12,7 @@ use crate::database::{
 };
 
 impl TeamsDb for DbConnection {
-    fn get_team_by_id(&self, id: Uuid) -> Result<Team, DbError> {
+    fn get_team(&self, id: Uuid) -> Result<Team, DbError> {
         let team: Team = teams::table.find(id).get_result(self.deref())?;
 
         Ok(team)
@@ -50,7 +50,7 @@ mod tests {
         conn.deref().test_transaction::<_, Error, _>(|| {
             let new_team = create_default_team(&conn);
 
-            let team = conn.get_team_by_id(new_team.id).unwrap();
+            let team = conn.get_team(new_team.id).unwrap();
 
             assert_eq!(team, new_team);
 
@@ -62,7 +62,7 @@ mod tests {
     fn test_get_unexisting_team() {
         let conn = DbConnectionBuilder::new();
 
-        let error = conn.get_team_by_id(Uuid::new_v4()).unwrap_err();
+        let error = conn.get_team(Uuid::new_v4()).unwrap_err();
 
         assert_eq!(error, DbError::NotFound);
     }

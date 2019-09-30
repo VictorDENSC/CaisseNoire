@@ -9,6 +9,15 @@ pub struct ErrorResponse {
     pub description: String,
 }
 
+impl ErrorResponse {
+    pub fn not_found() -> ErrorResponse {
+        ErrorResponse {
+            kind: ErrorKind::NotFound,
+            description: String::from("Not found"),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ErrorKind {
@@ -75,7 +84,7 @@ impl From<JsonError> for ErrorResponse {
 
 pub mod test_utils {
     use rouille::Request;
-    use serde::Serialize;
+    use serde_json::Value;
 
     pub struct RequestBuilder;
 
@@ -88,19 +97,15 @@ pub mod test_utils {
             Request::fake_http("GET", url, vec![RequestBuilder::json_header()], vec![])
         }
 
-        pub fn post<T>(url: String, data: &T) -> Result<Request, ()>
-        where
-            T: Serialize,
-        {
-            match serde_json::to_vec(data) {
-                Ok(serialized_data) => Ok(Request::fake_http(
-                    "POST",
-                    url,
-                    vec![RequestBuilder::json_header()],
-                    serialized_data,
-                )),
-                Err(_) => Err(()),
-            }
+        pub fn post(url: String, data: &Value) -> Request {
+            let serialized_data = serde_json::to_vec(data).expect("Failed to serialize data");
+
+            Request::fake_http(
+                "POST",
+                url,
+                vec![RequestBuilder::json_header()],
+                serialized_data,
+            )
         }
     }
 

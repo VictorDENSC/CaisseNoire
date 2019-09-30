@@ -20,7 +20,7 @@ impl UsersDb for DbConnection {
         Ok(users)
     }
 
-    fn get_user_by_id(&self, team_id: Uuid, user_id: Uuid) -> Result<User, DbError> {
+    fn get_user(&self, team_id: Uuid, user_id: Uuid) -> Result<User, DbError> {
         let user: User = users::table
             .filter(users::team_id.eq(team_id).and(users::id.eq(user_id)))
             .get_result(self.deref())?;
@@ -85,7 +85,7 @@ mod tests {
         conn.deref().test_transaction::<_, Error, _>(|| {
             let new_user = create_default_user(&conn, "login");
 
-            let user = conn.get_user_by_id(new_user.team_id, new_user.id).unwrap();
+            let user = conn.get_user(new_user.team_id, new_user.id).unwrap();
 
             assert_eq!(new_user, user);
 
@@ -97,9 +97,7 @@ mod tests {
     fn test_get_unexisting_user() {
         let conn = DbConnectionBuilder::new();
 
-        let error = conn
-            .get_user_by_id(Uuid::new_v4(), Uuid::new_v4())
-            .unwrap_err();
+        let error = conn.get_user(Uuid::new_v4(), Uuid::new_v4()).unwrap_err();
 
         assert_eq!(error, DbError::NotFound);
     }

@@ -22,7 +22,4 @@ table! {
 
 joinable!(users -> teams (team_id));
 
-allow_tables_to_appear_in_same_query!(
-    teams,
-    users,
-);
+allow_tables_to_appear_in_same_query!(teams, users,);
