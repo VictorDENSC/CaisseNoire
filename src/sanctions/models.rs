@@ -26,7 +26,7 @@ pub struct CreateSanction {
 
 #[derive(Debug, AsJsonb, Serialize, Deserialize, PartialEq)]
 pub struct SanctionInfo {
-    pub id: Uuid,
+    pub associated_rule: Uuid,
     pub sanction_data: SanctionData,
 }
 

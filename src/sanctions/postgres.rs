@@ -11,6 +11,34 @@ use crate::database::{
     postgres::{DbConnection, DbError},
     schema::sanctions,
 };
+use crate::teams::interface::TeamsDb;
+use crate::users::interface::UsersDb;
+
+pub fn validate_sanction(conn: &DbConnection, sanction: &CreateSanction) -> Result<(), DbError> {
+    let team = conn.get_team(sanction.team_id).map_err(|err| match err {
+        DbError::NotFound => {
+            DbError::ForeignKeyViolation(String::from("The key team_id doesn't refer to anything"))
+        }
+        _ => err,
+    })?;
+
+    conn.get_user(team.id, sanction.user_id)
+        .map_err(|err| match err {
+            DbError::NotFound => DbError::ForeignKeyViolation(String::from(
+                "The key user_id doesn't refer to anything",
+            )),
+            _ => err,
+        })?;
+
+    team.rules
+        .iter()
+        .find(|rule| rule.id == sanction.sanction_info.associated_rule)
+        .ok_or(DbError::ForeignKeyViolation(String::from(
+            "The key associated_rule doesn't refer to anything",
+        )))?;
+
+    Ok(())
+}
 
 impl SanctionsDb for DbConnection {
     fn get_sanctions(
@@ -35,11 +63,15 @@ impl SanctionsDb for DbConnection {
     }
 
     fn create_sanction(&self, sanction: &CreateSanction) -> Result<Sanction, DbError> {
-        let sanction: Sanction = diesel::insert_into(sanctions::table)
-            .values(sanction)
-            .get_result(self.deref())?;
+        self.deref().transaction::<Sanction, DbError, _>(|| {
+            validate_sanction(self, sanction)?;
 
-        Ok(sanction)
+            let sanction: Sanction = diesel::insert_into(sanctions::table)
+                .values(sanction)
+                .get_result(self.deref())?;
+
+            Ok(sanction)
+        })
     }
 
     fn delete_sanction(&self, team_id: Uuid, sanction_id: Uuid) -> Result<Sanction, DbError> {
@@ -71,7 +103,10 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let sanction = create_default_sanction(&conn);
+            let sanction =
+                create_default_sanction(&conn, &create_default_user(&conn, "login"), None);
+
+            create_default_sanction(&conn, &create_default_user(&conn, "login_2"), None);
 
             let sanctions: Vec<Sanction> = conn.get_sanctions(sanction.team_id, None).unwrap();
 
@@ -82,12 +117,52 @@ mod tests {
     }
 
     #[test]
+    fn test_get_sanctions_with_date_interval() {
+        let conn = DbConnectionBuilder::new();
+
+        conn.deref().test_transaction::<_, Error, _>(|| {
+            let default_user = create_default_user(&conn, "login");
+
+            let sanction = create_default_sanction(
+                &conn,
+                &default_user,
+                Some(&NaiveDate::from_ymd(2019, 10, 13)),
+            );
+            create_default_sanction(
+                &conn,
+                &default_user,
+                Some(&NaiveDate::from_ymd(2019, 10, 5)),
+            );
+            create_default_sanction(
+                &conn,
+                &default_user,
+                Some(&NaiveDate::from_ymd(2019, 10, 25)),
+            );
+
+            let sanctions: Vec<Sanction> = conn
+                .get_sanctions(
+                    default_user.team_id,
+                    Some((
+                        NaiveDate::from_ymd(2019, 10, 6),
+                        NaiveDate::from_ymd(2019, 10, 20),
+                    )),
+                )
+                .unwrap();
+
+            assert_eq!(vec![sanction], sanctions);
+
+            Ok(())
+        })
+    }
+
+    #[test]
     fn test_create_sanction() {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
             let sanction_id = Uuid::new_v4();
             let user = create_default_user(&conn, "login");
+            let team = conn.get_team(user.team_id).unwrap();
 
             let sanction: Sanction = conn
                 .create_sanction(&CreateSanction {
@@ -95,7 +170,7 @@ mod tests {
                     user_id: user.id,
                     team_id: user.team_id,
                     sanction_info: SanctionInfo {
-                        id: Uuid::new_v4(),
+                        associated_rule: team.rules[0].id,
                         sanction_data: SanctionData::Basic,
                     },
                 })
@@ -105,5 +180,84 @@ mod tests {
 
             Ok(())
         });
+    }
+
+    #[test]
+    fn test_create_sanction_fails() {
+        let conn = DbConnectionBuilder::new();
+
+        conn.deref().test_transaction::<_, Error, _>(|| {
+            let default_user = create_default_user(&conn, "login");
+            let mut sanction = CreateSanction {
+                id: Uuid::new_v4(),
+                team_id: Uuid::new_v4(),
+                user_id: Uuid::new_v4(),
+                sanction_info: SanctionInfo {
+                    associated_rule: Uuid::new_v4(),
+                    sanction_data: SanctionData::Basic,
+                },
+            };
+
+            let error = conn.create_sanction(&sanction).unwrap_err();
+            assert_eq!(
+                error,
+                DbError::ForeignKeyViolation(String::from(
+                    "The key team_id doesn\'t refer to anything"
+                ))
+            );
+
+            sanction.team_id = default_user.team_id;
+            let error = conn.create_sanction(&sanction).unwrap_err();
+            assert_eq!(
+                error,
+                DbError::ForeignKeyViolation(String::from(
+                    "The key user_id doesn\'t refer to anything"
+                ))
+            );
+
+            sanction.user_id = default_user.id;
+            let error = conn.create_sanction(&sanction).unwrap_err();
+            assert_eq!(
+                error,
+                DbError::ForeignKeyViolation(String::from(
+                    "The key associated_rule doesn\'t refer to anything"
+                ))
+            );
+
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_delete_sanction() {
+        let conn = DbConnectionBuilder::new();
+
+        conn.deref().test_transaction::<_, Error, _>(|| {
+            let default_user = create_default_user(&conn, "login");
+            let sanction = create_default_sanction(&conn, &default_user, None);
+
+            let sanction_deleted = conn.delete_sanction(sanction.team_id, sanction.id).unwrap();
+
+            let error = sanctions::table
+                .find(sanction.id)
+                .get_result::<Sanction>(conn.deref())
+                .unwrap_err();
+
+            assert_eq!(sanction.id, sanction_deleted.id);
+            assert_eq!(error, Error::NotFound);
+
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_delete_sanction_fails() {
+        let conn = DbConnectionBuilder::new();
+
+        let error = conn
+            .delete_sanction(Uuid::new_v4(), Uuid::new_v4())
+            .unwrap_err();
+
+        assert_eq!(error, DbError::NotFound);
     }
 }
