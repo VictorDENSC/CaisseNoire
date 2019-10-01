@@ -64,13 +64,17 @@ impl Deref for DbConnection {
 }
 
 pub mod test_utils {
-    use diesel::prelude::*;
+    use chrono::naive::NaiveDate;
+    use diesel::{
+        dsl::{date, now},
+        prelude::*,
+    };
     use uuid::Uuid;
 
     use super::super::schema::*;
     use super::*;
-    use crate::sanctions::models::{CreateSanction, Sanction, SanctionData, SanctionInfo};
-    use crate::teams::models::Team;
+    use crate::sanctions::models::{Sanction, SanctionData, SanctionInfo};
+    use crate::teams::models::{Rule, RuleCategory, RuleKind, Team};
     use crate::users::models::User;
 
     pub struct DbConnectionBuilder;
@@ -86,7 +90,13 @@ pub mod test_utils {
         let default_team = Team {
             id: Uuid::new_v4(),
             name: String::from("Test_team"),
-            rules: vec![],
+            rules: vec![Rule {
+                id: Uuid::new_v4(),
+                name: String::from("rule_1"),
+                category: RuleCategory::TrainingDay,
+                description: String::from("Basic rule"),
+                kind: RuleKind::Basic { price: 2.5 },
+            }],
         };
 
         diesel::insert_into(teams::table)
@@ -116,21 +126,24 @@ pub mod test_utils {
             .expect("Failed to create default user")
     }
 
-    pub fn create_default_sanction(conn: &DbConnection) -> Sanction {
-        let default_user = create_default_user(conn, "login");
-
-        let default_sanction = CreateSanction {
-            id: Uuid::new_v4(),
-            user_id: default_user.id,
-            team_id: default_user.team_id,
-            sanction_info: SanctionInfo {
-                id: Uuid::new_v4(),
-                sanction_data: SanctionData::Basic,
-            },
-        };
-
+    pub fn create_default_sanction(
+        conn: &DbConnection,
+        user: &User,
+        created_at: Option<&NaiveDate>,
+    ) -> Sanction {
         diesel::insert_into(sanctions::table)
-            .values(&default_sanction)
+            .values((
+                sanctions::id.eq(Uuid::new_v4()),
+                sanctions::user_id.eq(user.id),
+                sanctions::team_id.eq(user.team_id),
+                sanctions::sanction_info.eq(SanctionInfo {
+                    associated_rule: Uuid::new_v4(),
+                    sanction_data: SanctionData::Basic,
+                }),
+                sanctions::created_at
+                    .eq(created_at
+                        .unwrap_or(&diesel::select(date(now)).first(conn.deref()).unwrap())),
+            ))
             .get_result(conn.deref())
             .expect("Failed to create default sanction")
     }
