@@ -66,9 +66,9 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_user = create_default_user(&conn, "login");
-
-            create_default_user(&conn, "login_2");
+            let new_user = create_default_user(&conn, None, None);
+            let new_team = create_default_team(&conn, Some(String::from("Second_Test_Team")));
+            create_default_user(&conn, Some(new_team.id), None);
 
             let users = conn.get_users(new_user.team_id).unwrap();
 
@@ -83,7 +83,7 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_user = create_default_user(&conn, "login");
+            let new_user = create_default_user(&conn, None, None);
 
             let user = conn.get_user(new_user.team_id, new_user.id).unwrap();
 
@@ -107,7 +107,7 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let team = create_default_team(&conn);
+            let team = create_default_team(&conn, None);
 
             let new_user = User {
                 id: Uuid::new_v4(),
@@ -115,10 +115,7 @@ mod tests {
                 firstname: String::from("firstname"),
                 lastname: String::from("lastname"),
                 nickname: None,
-                login: String::from("login"),
-                password: String::from("password"),
                 email: None,
-                is_admin: false,
             };
 
             let user = conn.create_user(&new_user).unwrap();
@@ -139,10 +136,7 @@ mod tests {
             firstname: String::from("firstname"),
             lastname: String::from("lastname"),
             nickname: None,
-            login: String::from("login"),
-            password: String::from("password"),
-            email: None,
-            is_admin: false,
+            email: Some(String::from("email@gmail.com")),
         };
 
         conn.deref().test_transaction::<_, Error, _>(|| {
@@ -159,7 +153,7 @@ mod tests {
         });
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let default_user = create_default_user(&conn, "login");
+            let default_user = create_default_user(&conn, None, user.email.clone());
 
             user.team_id = default_user.team_id;
 
@@ -168,7 +162,7 @@ mod tests {
             assert_eq!(
                 error,
                 DbError::UniqueViolation(String::from(
-                    "The field login is already used by another user"
+                    "The field email is already used by another user"
                 ))
             );
 
@@ -181,7 +175,7 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let default_user = create_default_user(&conn, "login");
+            let default_user = create_default_user(&conn, None, None);
 
             let user = conn
                 .update_user(
@@ -191,10 +185,7 @@ mod tests {
                         firstname: String::from("name"),
                         lastname: default_user.lastname,
                         nickname: default_user.nickname,
-                        login: default_user.login,
-                        password: default_user.password,
                         email: default_user.email,
-                        is_admin: false,
                     },
                 )
                 .unwrap();
@@ -218,10 +209,7 @@ mod tests {
                     firstname: String::from("firstname"),
                     lastname: String::from("lastname"),
                     nickname: None,
-                    login: String::from("login"),
-                    password: String::from("password"),
                     email: None,
-                    is_admin: false,
                 },
             )
             .unwrap_err();
