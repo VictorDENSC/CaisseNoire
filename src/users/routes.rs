@@ -216,7 +216,7 @@ mod tests {
         )
         .unwrap_err();
 
-        assert_eq!(error.kind, ErrorKind::NotAllowed);
+        assert_eq!(error.kind, ErrorKind::BadReference);
 
         let error = handle_request(
             &RequestBuilder::post(format!("/teams/{}/users", team_id), &user),
@@ -224,7 +224,7 @@ mod tests {
         )
         .unwrap_err();
 
-        assert_eq!(error.kind, ErrorKind::NotAllowed);
+        assert_eq!(error.kind, ErrorKind::DuplicatedField);
 
         let invalid_json = json!({});
 
