@@ -63,6 +63,7 @@ impl Deref for DbConnection {
     }
 }
 
+#[cfg(test)]
 pub mod test_utils {
     use diesel::prelude::*;
     use uuid::Uuid;

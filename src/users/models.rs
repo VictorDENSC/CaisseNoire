@@ -10,10 +10,7 @@ pub struct UpdateUserRequest {
     pub firstname: String,
     pub lastname: String,
     pub nickname: Option<String>,
-    pub login: String,
-    pub password: String,
     pub email: Option<String>,
-    pub is_admin: bool,
 }
 
 impl From<(UpdateUserRequest, Uuid)> for User {
@@ -24,10 +21,7 @@ impl From<(UpdateUserRequest, Uuid)> for User {
             firstname: update_request.firstname,
             lastname: update_request.lastname,
             nickname: update_request.nickname,
-            login: update_request.login,
-            password: update_request.password,
             email: update_request.email,
-            is_admin: update_request.is_admin,
         }
     }
 }
@@ -38,10 +32,7 @@ impl From<UpdateUserRequest> for UpdateUser {
             firstname: update_request.firstname,
             lastname: update_request.lastname,
             nickname: update_request.nickname,
-            login: update_request.login,
-            password: update_request.password,
             email: update_request.email,
-            is_admin: update_request.is_admin,
         }
     }
 }
@@ -54,10 +45,7 @@ pub struct User {
     pub firstname: String,
     pub lastname: String,
     pub nickname: Option<String>,
-    pub login: String,
-    pub password: String,
     pub email: Option<String>,
-    pub is_admin: bool,
 }
 
 #[derive(AsChangeset)]
@@ -66,8 +54,5 @@ pub struct UpdateUser {
     pub firstname: String,
     pub lastname: String,
     pub nickname: Option<String>,
-    pub login: String,
-    pub password: String,
     pub email: Option<String>,
-    pub is_admin: bool,
 }

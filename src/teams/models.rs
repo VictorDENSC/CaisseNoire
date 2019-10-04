@@ -9,6 +9,7 @@ use crate::database::schema::teams;
 pub struct UpdateTeamRequest {
     pub id: Option<Uuid>,
     pub name: String,
+    pub admin_password: String,
     pub rules: Vec<UpdateRuleRequest>,
 }
 
@@ -17,6 +18,7 @@ impl From<UpdateTeamRequest> for Team {
         Team {
             id: update_request.id.unwrap_or(Uuid::new_v4()),
             name: update_request.name,
+            admin_password: update_request.admin_password,
             rules: update_request
                 .rules
                 .into_iter()
@@ -30,6 +32,7 @@ impl From<UpdateTeamRequest> for UpdateTeam {
     fn from(update_request: UpdateTeamRequest) -> UpdateTeam {
         UpdateTeam {
             name: update_request.name,
+            admin_password: update_request.admin_password,
             rules: update_request
                 .rules
                 .into_iter()
@@ -44,6 +47,7 @@ impl From<UpdateTeamRequest> for UpdateTeam {
 pub struct Team {
     pub id: Uuid,
     pub name: String,
+    pub admin_password: String,
     pub rules: Vec<Rule>,
 }
 
@@ -51,6 +55,7 @@ pub struct Team {
 #[table_name = "teams"]
 pub struct UpdateTeam {
     pub name: String,
+    pub admin_password: String,
     pub rules: Vec<Rule>,
 }
 
