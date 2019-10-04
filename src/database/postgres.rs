@@ -63,6 +63,7 @@ impl Deref for DbConnection {
     }
 }
 
+#[cfg(test)]
 pub mod test_utils {
     use diesel::prelude::*;
     use uuid::Uuid;
@@ -81,10 +82,11 @@ pub mod test_utils {
         }
     }
 
-    pub fn create_default_team(conn: &DbConnection) -> Team {
+    pub fn create_default_team(conn: &DbConnection, name: Option<String>) -> Team {
         let default_team = Team {
             id: Uuid::new_v4(),
-            name: String::from("Test_team"),
+            name: name.unwrap_or(String::from("Test_team")),
+            admin_password: String::from("password"),
             rules: vec![],
         };
 
@@ -94,19 +96,20 @@ pub mod test_utils {
             .expect("Failed to create default team")
     }
 
-    pub fn create_default_user(conn: &DbConnection, login: &str) -> User {
-        let default_team = create_default_team(conn);
+    pub fn create_default_user(
+        conn: &DbConnection,
+        team_id: Option<Uuid>,
+        email: Option<String>,
+    ) -> User {
+        let default_team_id = team_id.unwrap_or_else(|| create_default_team(conn, None).id);
 
         let default_user = User {
             id: Uuid::new_v4(),
-            team_id: default_team.id,
+            team_id: default_team_id,
             firstname: String::from("firstname"),
             lastname: String::from("lastname"),
             nickname: None,
-            login: String::from(login),
-            password: String::from("password"),
-            email: None,
-            is_admin: false,
+            email,
         };
 
         diesel::insert_into(users::table)

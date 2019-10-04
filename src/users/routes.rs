@@ -66,10 +66,7 @@ mod tests {
             firstname: String::from("firstname"),
             lastname: String::from("lastname"),
             nickname: None,
-            login: String::from("login"),
-            password: String::from("password"),
             email: None,
-            is_admin: false,
         }
     }
 
@@ -122,10 +119,7 @@ mod tests {
                     firstname: user.firstname.clone(),
                     lastname: user.lastname.clone(),
                     nickname: user.nickname.clone(),
-                    login: user.login.clone(),
-                    password: user.password.clone(),
                     email: user.email.clone(),
-                    is_admin: user.is_admin.clone(),
                 }),
                 UsersDbMock::NotFound => Err(DbError::NotFound),
                 _ => unimplemented!(),

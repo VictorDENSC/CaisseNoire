@@ -48,7 +48,7 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_team = create_default_team(&conn);
+            let new_team = create_default_team(&conn, None);
 
             let team = conn.get_team(new_team.id).unwrap();
 
@@ -75,6 +75,7 @@ mod tests {
             let team = Team {
                 id: Uuid::new_v4(),
                 name: String::from("Team_Test"),
+                admin_password: String::from("password"),
                 rules: vec![Rule {
                     id: Uuid::new_v4(),
                     name: String::from("Rule_Test"),
@@ -100,19 +101,21 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_team = create_default_team(&conn);
+            let new_team = create_default_team(&conn, None);
 
             let team = conn
                 .update_team(
                     new_team.id,
                     &UpdateTeam {
                         name: String::from("New name"),
+                        admin_password: String::from("new_password"),
                         rules: new_team.rules,
                     },
                 )
                 .unwrap();
 
             assert_eq!(&team.name, "New name");
+            assert_eq!(&team.admin_password, "new_password");
 
             Ok(())
         });
@@ -127,6 +130,7 @@ mod tests {
                 Uuid::new_v4(),
                 &UpdateTeam {
                     name: String::from(""),
+                    admin_password: String::from(""),
                     rules: vec![],
                 },
             )

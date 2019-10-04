@@ -57,6 +57,7 @@ mod tests {
                 TeamsDbMock::Success => Ok(Team {
                     id: id,
                     name: String::from("Test_team"),
+                    admin_password: String::from("password"),
                     rules: vec![],
                 }),
                 TeamsDbMock::NotFound => Err(DbError::NotFound),
@@ -77,6 +78,7 @@ mod tests {
                 TeamsDbMock::Success => Ok(Team {
                     id,
                     name: team.name.clone(),
+                    admin_password: team.admin_password.clone(),
                     rules: team.rules.clone(),
                 }),
                 TeamsDbMock::NotFound => Err(DbError::NotFound),
@@ -122,6 +124,7 @@ mod tests {
     fn test_create_team() {
         let team = json!({
             "name": "Test_team",
+            "admin_password": "password",
             "rules": [{
                 "name": "Rule_Test",
                 "category": "TRAINING_DAY",
@@ -149,6 +152,7 @@ mod tests {
     fn test_create_team_fails() {
         let team = json!({
             "name": "Test_team",
+            "admin_password": "password",
             "rules": []
         });
 
@@ -176,6 +180,7 @@ mod tests {
         let id = Uuid::new_v4();
         let team = json!({
             "name": "Test_team",
+            "admin_password": "password",
             "rules": []
         });
 
@@ -193,6 +198,7 @@ mod tests {
         let id = Uuid::new_v4();
         let team = json!({
             "name": "Test_team",
+            "admin_password": "password",
             "rules": []
         });
 
