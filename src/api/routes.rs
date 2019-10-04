@@ -1,5 +1,7 @@
 use super::models::ErrorResponse;
-use crate::sanctions::interface::SanctionsDb;
+use crate::sanctions::{
+    interface::SanctionsDb, routes::handle_request as sanctions_request_handling,
+};
 use crate::teams::{interface::TeamsDb, routes::handle_request as teams_request_handling};
 use crate::users::{interface::UsersDb, routes::handle_request as users_request_handling};
 use rouille::{find_route, Request, Response};
@@ -21,6 +23,7 @@ where
 {
     find_route!(
         extract_response(teams_request_handling(request, db)),
-        extract_response(users_request_handling(request, db))
+        extract_response(users_request_handling(request, db)),
+        extract_response(sanctions_request_handling(request, db))
     )
 }
