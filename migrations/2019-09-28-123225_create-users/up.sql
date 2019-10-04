@@ -4,12 +4,8 @@ CREATE TABLE users (
     firstname VARCHAR NOT NULL,
     lastname VARCHAR NOT NULL,
     nickname VARCHAR,
-    login VARCHAR NOT NULL,
-    password VARCHAR NOT NULL,
     email VARCHAR,
-    is_admin BOOLEAN NOT NULL,
 
     CONSTRAINT team_id FOREIGN KEY (team_id) REFERENCES teams (id) ON DELETE CASCADE,
-    CONSTRAINT login UNIQUE (login),
     CONSTRAINT email UNIQUE (email)
 )
