@@ -95,7 +95,7 @@ mod tests {
     use super::super::models::{SanctionData, SanctionInfo};
     use super::*;
     use crate::database::postgres::test_utils::{
-        create_default_sanction, create_default_user, DbConnectionBuilder,
+        create_default_sanction, create_default_team, create_default_user, DbConnectionBuilder,
     };
 
     #[test]
@@ -104,9 +104,17 @@ mod tests {
 
         conn.deref().test_transaction::<_, Error, _>(|| {
             let sanction =
-                create_default_sanction(&conn, &create_default_user(&conn, "login"), None);
+                create_default_sanction(&conn, &create_default_user(&conn, None, None), None);
 
-            create_default_sanction(&conn, &create_default_user(&conn, "login_2"), None);
+            create_default_sanction(
+                &conn,
+                &create_default_user(
+                    &conn,
+                    Some(create_default_team(&conn, Some(String::from("Team_Test_2"))).id),
+                    None,
+                ),
+                None,
+            );
 
             let sanctions: Vec<Sanction> = conn.get_sanctions(sanction.team_id, None).unwrap();
 
@@ -121,7 +129,7 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let default_user = create_default_user(&conn, "login");
+            let default_user = create_default_user(&conn, None, None);
 
             let sanction = create_default_sanction(
                 &conn,
@@ -161,7 +169,7 @@ mod tests {
 
         conn.deref().test_transaction::<_, Error, _>(|| {
             let sanction_id = Uuid::new_v4();
-            let user = create_default_user(&conn, "login");
+            let user = create_default_user(&conn, None, None);
             let team = conn.get_team(user.team_id).unwrap();
 
             let sanction: Sanction = conn
@@ -187,7 +195,7 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let default_user = create_default_user(&conn, "login");
+            let default_user = create_default_user(&conn, None, None);
             let mut sanction = CreateSanction {
                 id: Uuid::new_v4(),
                 team_id: Uuid::new_v4(),
@@ -233,7 +241,7 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let default_user = create_default_user(&conn, "login");
+            let default_user = create_default_user(&conn, None, None);
             let sanction = create_default_sanction(&conn, &default_user, None);
 
             let sanction_deleted = conn.delete_sanction(sanction.team_id, sanction.id).unwrap();
