@@ -102,15 +102,17 @@ pub enum RuleKind {
     Basic {
         price: f32,
     },
-    BasedOnMultiple {
+    Multiplication {
         price_to_multiply: f32,
     },
-    BasedOnTime {
+    TimeMultiplication {
         price_per_time_unit: f32,
         time_unit: TimeUnit,
     },
-    EachTimeInterval {
+    RegularIntervals {
         price: f32,
+        interval_in_time_unit: u32,
+        time_unit: TimeUnit,
     },
 }
 
@@ -121,4 +123,7 @@ pub enum TimeUnit {
     Minutes,
     Hours,
     Days,
+    Week,
+    Month,
+    Year,
 }

@@ -2,6 +2,7 @@ use rouille::input::json::JsonError;
 use serde::Serialize;
 
 use crate::database::postgres::DbError;
+use crate::sanctions::utils::parameters::{ParameterError, ParameterErrorKind};
 
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
@@ -16,6 +17,13 @@ impl ErrorResponse {
             description: String::from("Not found"),
         }
     }
+
+    pub fn bad_parameter(description: String) -> ErrorResponse {
+        ErrorResponse {
+            kind: ErrorKind::BadParameter,
+            description,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -25,7 +33,9 @@ pub enum ErrorKind {
     Unknown,
     NotFound,
     Json,
-    NotAllowed,
+    BadReference,
+    DuplicatedField,
+    BadParameter,
 }
 
 impl ErrorKind {
@@ -35,7 +45,9 @@ impl ErrorKind {
             ErrorKind::Unknown => 500,
             ErrorKind::NotFound => 404,
             ErrorKind::Json => 400,
-            ErrorKind::NotAllowed => 400,
+            ErrorKind::BadReference => 400,
+            ErrorKind::DuplicatedField => 400,
+            ErrorKind::BadParameter => 400,
         }
     }
 }
@@ -62,13 +74,40 @@ impl From<DbError> for ErrorResponse {
                 description: String::from("The service is currently unavailable"),
             },
             DbError::ForeignKeyViolation(description) => ErrorResponse {
-                kind: ErrorKind::NotAllowed,
+                kind: ErrorKind::BadReference,
                 description,
             },
             DbError::UniqueViolation(description) => ErrorResponse {
-                kind: ErrorKind::NotAllowed,
+                kind: ErrorKind::DuplicatedField,
                 description,
             },
+        }
+    }
+}
+
+impl From<ParameterError> for ErrorResponse {
+    fn from(error: ParameterError) -> ErrorResponse {
+        match error.kind {
+            ParameterErrorKind::UnvalidValue {
+                parameter_value,
+                reason,
+            } => ErrorResponse::bad_parameter(format!(
+                "{} is not a possible value for the {} parameter. {}.",
+                parameter_value, error.parameter_name, reason
+            )),
+            ParameterErrorKind::UnvalidType { expected_type } => {
+                ErrorResponse::bad_parameter(format!(
+                    "The {} parameter must be a {}.",
+                    error.parameter_name, expected_type
+                ))
+            }
+            ParameterErrorKind::UnvalidCombination { missing_parameters } => {
+                ErrorResponse::bad_parameter(format!(
+                    "The {} parameter must be combined with these parameters : {}.",
+                    error.parameter_name,
+                    missing_parameters.join(", ")
+                ))
+            }
         }
     }
 }

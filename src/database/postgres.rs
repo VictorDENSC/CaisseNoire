@@ -65,12 +65,17 @@ impl Deref for DbConnection {
 
 #[cfg(test)]
 pub mod test_utils {
-    use diesel::prelude::*;
+    use chrono::naive::NaiveDate;
+    use diesel::{
+        dsl::{date, now},
+        prelude::*,
+    };
     use uuid::Uuid;
 
     use super::super::schema::*;
     use super::*;
-    use crate::teams::models::Team;
+    use crate::sanctions::models::{Sanction, SanctionData, SanctionInfo};
+    use crate::teams::models::{Rule, RuleCategory, RuleKind, Team};
     use crate::users::models::User;
 
     pub struct DbConnectionBuilder;
@@ -87,7 +92,13 @@ pub mod test_utils {
             id: Uuid::new_v4(),
             name: name.unwrap_or(String::from("Test_team")),
             admin_password: String::from("password"),
-            rules: vec![],
+            rules: vec![Rule {
+                id: Uuid::new_v4(),
+                name: String::from("rule_1"),
+                category: RuleCategory::TrainingDay,
+                description: String::from("Basic rule"),
+                kind: RuleKind::Basic { price: 2.5 },
+            }],
         };
 
         diesel::insert_into(teams::table)
@@ -116,5 +127,27 @@ pub mod test_utils {
             .values(&default_user)
             .get_result(conn.deref())
             .expect("Failed to create default user")
+    }
+
+    pub fn create_default_sanction(
+        conn: &DbConnection,
+        user: &User,
+        created_at: Option<&NaiveDate>,
+    ) -> Sanction {
+        diesel::insert_into(sanctions::table)
+            .values((
+                sanctions::id.eq(Uuid::new_v4()),
+                sanctions::user_id.eq(user.id),
+                sanctions::team_id.eq(user.team_id),
+                sanctions::sanction_info.eq(SanctionInfo {
+                    associated_rule: Uuid::new_v4(),
+                    sanction_data: SanctionData::Basic,
+                }),
+                sanctions::created_at
+                    .eq(created_at
+                        .unwrap_or(&diesel::select(date(now)).first(conn.deref()).unwrap())),
+            ))
+            .get_result(conn.deref())
+            .expect("Failed to create default sanction")
     }
 }
