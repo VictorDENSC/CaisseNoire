@@ -21,9 +21,12 @@ pub fn handle_request<T>(request: &Request, db: &T) -> Response
 where
     T: TeamsDb + UsersDb + SanctionsDb,
 {
-    find_route!(
-        extract_response(teams_request_handling(request, db)),
-        extract_response(users_request_handling(request, db)),
-        extract_response(sanctions_request_handling(request, db))
-    )
+    match request.method() {
+        "OPTIONS" => Response::empty_204(),
+        _ => find_route!(
+            extract_response(teams_request_handling(request, db)),
+            extract_response(users_request_handling(request, db)),
+            extract_response(sanctions_request_handling(request, db))
+        ),
+    }
 }
