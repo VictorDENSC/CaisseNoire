@@ -14,7 +14,7 @@ fn extract_var(var_name: &str) -> Result<String, VarError> {
 fn with_cors_enabled(response: Response, enabled_cors: bool) -> Response {
     match enabled_cors {
         true => response
-            .with_additional_header("Access-Control-Allow-Origin", "http://localhost:8080")
+            .with_additional_header("Access-Control-Allow-Origin", "*")
             .with_additional_header("Access-Control-Allow-Headers", "content-type"),
         false => response,
     }
