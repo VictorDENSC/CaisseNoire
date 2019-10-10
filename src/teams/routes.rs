@@ -1,13 +1,16 @@
 use rouille::{input::json::json_input, router, Request};
 use uuid::Uuid;
 
-use super::api::models::{ErrorKind, ErrorResponse};
 use super::{
     interface::TeamsDb,
     models::{Team, UpdateTeam, UpdateTeamRequest},
 };
+use crate::api::models::ErrorResponse;
 
-pub fn handle_request<T: TeamsDb>(request: &Request, db: T) -> Result<Team, ErrorResponse> {
+pub fn handle_request<T>(request: &Request, db: &T) -> Result<Team, ErrorResponse>
+where
+    T: TeamsDb,
+{
     router!(request,
         (POST) (/teams) => {
             let input: Team = json_input::<UpdateTeamRequest>(request)?.into();
@@ -17,7 +20,7 @@ pub fn handle_request<T: TeamsDb>(request: &Request, db: T) -> Result<Team, Erro
             Ok(result)
         },
         (GET) (/teams/{id:Uuid}) => {
-            let result: Team = db.get_team_by_id(id)?;
+            let result: Team = db.get_team(id)?;
 
             Ok(result)
         },
@@ -29,18 +32,17 @@ pub fn handle_request<T: TeamsDb>(request: &Request, db: T) -> Result<Team, Erro
             Ok(result)
         },
         _ => {
-            Err(ErrorResponse {
-                kind: ErrorKind::NotFound,
-                description: String::from("Not found")
-            })
+            Err(ErrorResponse::not_found())
         }
     )
 }
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
+
     use super::*;
-    use crate::api::models::test_utils::RequestBuilder;
+    use crate::api::models::{test_utils::RequestBuilder, ErrorKind};
     use crate::database::postgres::DbError;
 
     pub enum TeamsDbMock {
@@ -50,11 +52,12 @@ mod tests {
     }
 
     impl TeamsDb for TeamsDbMock {
-        fn get_team_by_id(&self, id: Uuid) -> Result<Team, DbError> {
+        fn get_team(&self, id: Uuid) -> Result<Team, DbError> {
             match self {
                 TeamsDbMock::Success => Ok(Team {
                     id: id,
                     name: String::from("Test_team"),
+                    admin_password: String::from("password"),
                     rules: vec![],
                 }),
                 TeamsDbMock::NotFound => Err(DbError::NotFound),
@@ -75,6 +78,7 @@ mod tests {
                 TeamsDbMock::Success => Ok(Team {
                     id,
                     name: team.name.clone(),
+                    admin_password: team.admin_password.clone(),
                     rules: team.rules.clone(),
                 }),
                 TeamsDbMock::NotFound => Err(DbError::NotFound),
@@ -88,7 +92,7 @@ mod tests {
         let id = Uuid::new_v4();
         let response = handle_request(
             &RequestBuilder::get(format!("/teams/{}", id)),
-            TeamsDbMock::Success,
+            &TeamsDbMock::Success,
         )
         .unwrap();
 
@@ -101,7 +105,7 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::get(format!("/teams/{}", id)),
-            TeamsDbMock::NotFound,
+            &TeamsDbMock::NotFound,
         )
         .unwrap_err();
 
@@ -109,7 +113,7 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::get(format!("/teams/{}", id)),
-            TeamsDbMock::Unknown,
+            &TeamsDbMock::Unknown,
         )
         .unwrap_err();
 
@@ -118,47 +122,71 @@ mod tests {
 
     #[test]
     fn test_create_team() {
-        let team = UpdateTeamRequest {
-            name: String::from("Test_team"),
-            rules: vec![],
-        };
+        let team = json!({
+            "name": "Test_team",
+            "admin_password": "password",
+            "rules": [{
+                "name": "Rule_Test",
+                "category": "TRAINING_DAY",
+                "description": "This is a description !",
+                "kind": {
+                    "TIME_MULTIPLICATION": {
+                        "price_per_time_unit": 0.2,
+                        "time_unit": "MINUTES"
+                    }
+                }
+            }]
+        });
 
         let response = handle_request(
-            &RequestBuilder::post(String::from("/teams"), &team).unwrap(),
-            TeamsDbMock::Success,
+            &RequestBuilder::post(String::from("/teams"), &team),
+            &TeamsDbMock::Success,
         )
         .unwrap();
 
-        assert_eq!(response.name, team.name);
+        assert_eq!(response.name, team["name"]);
+        assert_eq!(response.rules[0].name, team["rules"][0]["name"]);
     }
 
     #[test]
     fn test_create_team_fails() {
-        let team = UpdateTeamRequest {
-            name: String::from("Test_team"),
-            rules: vec![],
-        };
+        let team = json!({
+            "name": "Test_team",
+            "admin_password": "password",
+            "rules": []
+        });
 
         let error = handle_request(
-            &RequestBuilder::post(String::from("/teams"), &team).unwrap(),
-            TeamsDbMock::Unknown,
+            &RequestBuilder::post(String::from("/teams"), &team),
+            &TeamsDbMock::Unknown,
         )
         .unwrap_err();
 
-        assert_eq!(error.kind, ErrorKind::Unknown)
+        assert_eq!(error.kind, ErrorKind::Unknown);
+
+        let invalid_json = json!({});
+
+        let error = handle_request(
+            &RequestBuilder::post(String::from("/teams"), &invalid_json),
+            &TeamsDbMock::Success,
+        )
+        .unwrap_err();
+
+        assert_eq!(error.kind, ErrorKind::Json);
     }
 
     #[test]
     fn test_update_team() {
         let id = Uuid::new_v4();
-        let team = UpdateTeamRequest {
-            name: String::from("Test_team"),
-            rules: vec![],
-        };
+        let team = json!({
+            "name": "Test_team",
+            "admin_password": "password",
+            "rules": []
+        });
 
         let response = handle_request(
-            &RequestBuilder::post(format!("/teams/{}", id), &team).unwrap(),
-            TeamsDbMock::Success,
+            &RequestBuilder::post(format!("/teams/{}", id), &team),
+            &TeamsDbMock::Success,
         )
         .unwrap();
 
@@ -168,22 +196,23 @@ mod tests {
     #[test]
     fn test_update_team_fails() {
         let id = Uuid::new_v4();
-        let team = UpdateTeamRequest {
-            name: String::from("Test_team"),
-            rules: vec![],
-        };
+        let team = json!({
+            "name": "Test_team",
+            "admin_password": "password",
+            "rules": []
+        });
 
         let error = handle_request(
-            &RequestBuilder::post(format!("/teams/{}", id), &team).unwrap(),
-            TeamsDbMock::NotFound,
+            &RequestBuilder::post(format!("/teams/{}", id), &team),
+            &TeamsDbMock::NotFound,
         )
         .unwrap_err();
 
         assert_eq!(error.kind, ErrorKind::NotFound);
 
         let error = handle_request(
-            &RequestBuilder::post(format!("/teams/{}", id), &team).unwrap(),
-            TeamsDbMock::Unknown,
+            &RequestBuilder::post(format!("/teams/{}", id), &team),
+            &TeamsDbMock::Unknown,
         )
         .unwrap_err();
 
