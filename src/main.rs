@@ -11,12 +11,13 @@ fn extract_var(var_name: &str) -> Result<String, VarError> {
     var(var_name)
 }
 
-fn with_cors_enabled(response: Response, enabled_cors: bool) -> Response {
-    match enabled_cors {
-        true => response
-            .with_additional_header("Access-Control-Allow-Origin", "*")
-            .with_additional_header("Access-Control-Allow-Headers", "content-type"),
-        false => response,
+fn with_cors(response: Response) -> Response {
+    match extract_var("ENABLED_ORIGIN").ok() {
+        Some(origin) => response
+            .with_additional_header("Access-Control-Allow-Origin", origin)
+            .with_additional_header("Access-Control-Allow-Headers", "content-type")
+            .with_additional_header("Access-Control-Request-Method", "GET, POST, DELETE"),
+        None => response,
     }
 }
 
@@ -31,21 +32,13 @@ fn main() {
         Err(_) => panic!("DATABASE_URL must be set"),
     };
 
-    let enabled_cors = match extract_var("ENABLED_CORS") {
-        Ok(enabled_cors) => enabled_cors.parse().unwrap_or(false),
-        Err(_) => false,
-    };
-
     start_server(format!("0.0.0.0:{}", port), move |request| {
-        with_cors_enabled(
-            match init_db_connection(&database_url) {
-                Ok(db_connection) => handle_request(request, &db_connection),
-                Err(err) => {
-                    let error_response: ErrorResponse = err.into();
-                    error_response.into()
-                }
-            },
-            enabled_cors,
-        )
+        with_cors(match init_db_connection(&database_url) {
+            Ok(db_connection) => handle_request(request, &db_connection),
+            Err(err) => {
+                let error_response: ErrorResponse = err.into();
+                error_response.into()
+            }
+        })
     });
 }
