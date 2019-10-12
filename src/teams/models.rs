@@ -97,7 +97,7 @@ pub enum RuleCategory {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE", tag = "type")]
 pub enum RuleKind {
     Basic {
         price: f32,
@@ -119,10 +119,10 @@ pub enum RuleKind {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum TimeUnit {
-    Seconds,
-    Minutes,
-    Hours,
-    Days,
+    Second,
+    Minute,
+    Hour,
+    Day,
     Week,
     Month,
     Year,

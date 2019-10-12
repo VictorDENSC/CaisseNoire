@@ -49,7 +49,7 @@ pub struct SanctionInfo {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE", tag = "type")]
 pub enum SanctionData {
     Basic,
     Multiplication { multiple: u32 },
