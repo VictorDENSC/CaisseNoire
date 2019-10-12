@@ -234,7 +234,9 @@ mod tests {
             "user_id": Uuid::new_v4(),
             "sanction_info": {
                 "associated_rule": Uuid::new_v4(),
-                "sanction_data": "BASIC"
+                "sanction_data": {
+                    "type": "BASIC"
+                }
             }
         });
 
@@ -257,7 +259,9 @@ mod tests {
             "user_id": Uuid::new_v4(),
             "sanction_info": {
                 "associated_rule": Uuid::new_v4(),
-                "sanction_data": "BASIC"
+                "sanction_data": {
+                    "type": "BASIC"
+                }
             }
         });
 
