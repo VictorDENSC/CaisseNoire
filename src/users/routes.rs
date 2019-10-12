@@ -59,7 +59,7 @@ mod tests {
     use crate::api::models::{test_utils::RequestBuilder, ErrorKind};
     use crate::database::postgres::DbError;
 
-    pub fn default_user(team_id: Uuid, user_id: Uuid) -> User {
+    fn default_user(team_id: Uuid, user_id: Uuid) -> User {
         User {
             id: user_id,
             team_id,
@@ -70,7 +70,7 @@ mod tests {
         }
     }
 
-    pub enum UsersDbMock {
+    enum UsersDbMock {
         Success,
         NotFound,
         UnexistingTeam,

@@ -45,7 +45,7 @@ mod tests {
     use crate::api::models::{test_utils::RequestBuilder, ErrorKind};
     use crate::database::postgres::DbError;
 
-    pub enum TeamsDbMock {
+    enum TeamsDbMock {
         Success,
         NotFound,
         Unknown,
@@ -130,10 +130,9 @@ mod tests {
                 "category": "TRAINING_DAY",
                 "description": "This is a description !",
                 "kind": {
-                    "TIME_MULTIPLICATION": {
-                        "price_per_time_unit": 0.2,
-                        "time_unit": "MINUTES"
-                    }
+                    "type": "TIME_MULTIPLICATION",
+                    "price_per_time_unit": 0.2,
+                    "time_unit": "MINUTE"
                 }
             }]
         });

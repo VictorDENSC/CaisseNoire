@@ -146,6 +146,10 @@ pub mod test_utils {
                 serialized_data,
             )
         }
+
+        pub fn delete(url: String) -> Request {
+            Request::fake_http("DELETE", url, vec![RequestBuilder::json_header()], vec![])
+        }
     }
 
 }

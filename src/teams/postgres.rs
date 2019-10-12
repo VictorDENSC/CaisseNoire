@@ -83,7 +83,7 @@ mod tests {
                     description: String::from("This is a description !"),
                     kind: RuleKind::TimeMultiplication {
                         price_per_time_unit: 0.2,
-                        time_unit: TimeUnit::Minutes,
+                        time_unit: TimeUnit::Minute,
                     },
                 }],
             };
