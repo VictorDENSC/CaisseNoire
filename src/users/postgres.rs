@@ -57,8 +57,8 @@ mod tests {
     use diesel::result::Error;
 
     use super::*;
-    use crate::database::postgres::test_utils::{
-        create_default_team, create_default_user, DbConnectionBuilder,
+    use crate::test_utils::postgres::{
+        insert_default_team, insert_default_user, DbConnectionBuilder,
     };
 
     #[test]
@@ -66,9 +66,9 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_user = create_default_user(&conn, None, None);
-            let new_team = create_default_team(&conn, Some(String::from("Second_Test_Team")));
-            create_default_user(&conn, Some(new_team.id), None);
+            let new_user = insert_default_user(&conn, None, None);
+            let new_team = insert_default_team(&conn, Some(String::from("Second_Test_Team")));
+            insert_default_user(&conn, Some(new_team.id), None);
 
             let users = conn.get_users(new_user.team_id).unwrap();
 
@@ -83,7 +83,7 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_user = create_default_user(&conn, None, None);
+            let new_user = insert_default_user(&conn, None, None);
 
             let user = conn.get_user(new_user.team_id, new_user.id).unwrap();
 
@@ -107,7 +107,7 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let team = create_default_team(&conn, None);
+            let team = insert_default_team(&conn, None);
 
             let new_user = User {
                 id: Uuid::new_v4(),
@@ -153,7 +153,7 @@ mod tests {
         });
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let default_user = create_default_user(&conn, None, user.email.clone());
+            let default_user = insert_default_user(&conn, None, user.email.clone());
 
             user.team_id = default_user.team_id;
 
@@ -175,7 +175,7 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let default_user = create_default_user(&conn, None, None);
+            let default_user = insert_default_user(&conn, None, None);
 
             let user = conn
                 .update_user(

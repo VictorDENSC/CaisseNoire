@@ -70,101 +70,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use chrono::naive::NaiveDate;
     use serde_json::json;
 
-    use super::super::models::{ExtraInfo, SanctionInfo};
     use super::*;
     use crate::api::models::{test_utils::RequestBuilder, ErrorKind};
-    use crate::database::postgres::DbError;
-
-    fn create_default_sanction(
-        id: Option<Uuid>,
-        team_id: Uuid,
-        created_at: Option<NaiveDate>,
-    ) -> Sanction {
-        Sanction {
-            id: id.unwrap_or(Uuid::new_v4()),
-            user_id: Uuid::new_v4(),
-            team_id,
-            sanction_info: SanctionInfo {
-                associated_rule: Uuid::new_v4(),
-                extra_info: ExtraInfo::None,
-            },
-            price: 0.0,
-            created_at: created_at.unwrap_or(NaiveDate::from_ymd(2019, 10, 15)),
-        }
-    }
-
-    enum SanctionsDbMock {
-        Success,
-        NotFound,
-    }
-
-    impl SanctionsDb for SanctionsDbMock {
-        fn get_sanctions(
-            &self,
-            team_id: Uuid,
-            date_interval: Option<(NaiveDate, NaiveDate)>,
-        ) -> Result<Vec<Sanction>, DbError> {
-            match self {
-                SanctionsDbMock::Success => {
-                    let basic_result = vec![
-                        create_default_sanction(
-                            None,
-                            team_id,
-                            Some(NaiveDate::from_ymd(2019, 10, 5)),
-                        ),
-                        create_default_sanction(
-                            None,
-                            team_id,
-                            Some(NaiveDate::from_ymd(2019, 10, 15)),
-                        ),
-                        create_default_sanction(
-                            None,
-                            team_id,
-                            Some(NaiveDate::from_ymd(2019, 11, 5)),
-                        ),
-                    ];
-                    Ok(match date_interval {
-                        Some((min, max)) => basic_result
-                            .into_iter()
-                            .filter(|sanction| {
-                                sanction.created_at >= min && sanction.created_at <= max
-                            })
-                            .collect(),
-                        None => basic_result,
-                    })
-                }
-                _ => unimplemented!(),
-            }
-        }
-
-        fn create_sanction(&self, sanction: &CreateSanction) -> Result<Sanction, DbError> {
-            match self {
-                SanctionsDbMock::Success => Ok(Sanction {
-                    id: sanction.id,
-                    user_id: sanction.user_id,
-                    team_id: sanction.team_id,
-                    sanction_info: sanction.sanction_info.clone(),
-                    price: 0.0,
-                    created_at: NaiveDate::from_ymd(2019, 10, 15),
-                }),
-                SanctionsDbMock::NotFound => {
-                    Err(DbError::ForeignKeyViolation(String::from("Error")))
-                }
-            }
-        }
-
-        fn delete_sanction(&self, team_id: Uuid, sanction_id: Uuid) -> Result<Sanction, DbError> {
-            match self {
-                SanctionsDbMock::Success => {
-                    Ok(create_default_sanction(Some(sanction_id), team_id, None))
-                }
-                SanctionsDbMock::NotFound => Err(DbError::NotFound),
-            }
-        }
-    }
+    use crate::test_utils::routes::{DbMock, SanctionsDbMock};
 
     #[test]
     fn test_get_sanctions() {
@@ -172,7 +82,7 @@ mod tests {
 
         let response = json!(handle_request(
             &RequestBuilder::get(format!("/teams/{}/sanctions", team_id)),
-            &SanctionsDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap());
 
@@ -185,7 +95,7 @@ mod tests {
 
         let response = json!(handle_request(
             &RequestBuilder::get(format!("/teams/{}/sanctions?month=10&year=2019", team_id)),
-            &SanctionsDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap());
 
@@ -198,7 +108,7 @@ mod tests {
 
         let response = json!(handle_request(
             &RequestBuilder::get(format!("/teams/{}/sanctions?format=true", team_id)),
-            &SanctionsDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap());
 
@@ -211,7 +121,7 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::get(format!("/teams/{}/sanctions?format=t", team_id)),
-            &SanctionsDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap_err();
 
@@ -223,7 +133,7 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::get(format!("/teams/{}/sanctions?month=1", team_id)),
-            &SanctionsDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap_err();
 
@@ -239,7 +149,7 @@ mod tests {
                 "/teams/{}/sanctions?month={}&year=2019",
                 team_id, month_value
             )),
-            &SanctionsDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap_err();
 
@@ -263,7 +173,7 @@ mod tests {
 
         let response = json!(handle_request(
             &RequestBuilder::post(format!("/teams/{}/sanctions", team_id), &sanction),
-            &SanctionsDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap());
 
@@ -288,7 +198,10 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::post(format!("/teams/{}/sanctions", team_id), &sanction),
-            &SanctionsDbMock::NotFound,
+            &DbMock {
+                sanctions_db: SanctionsDbMock::NotFound,
+                ..Default::default()
+            },
         )
         .unwrap_err();
 
@@ -298,7 +211,7 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::post(format!("/teams/{}/sanctions", team_id), &invalid_json),
-            &SanctionsDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap_err();
 
@@ -312,7 +225,7 @@ mod tests {
 
         let response = json!(handle_request(
             &RequestBuilder::delete(format!("/teams/{}/sanctions/{}", team_id, sanction_id)),
-            &SanctionsDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap());
 
@@ -327,7 +240,10 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::delete(format!("/teams/{}/sanctions/{}", team_id, sanction_id)),
-            &SanctionsDbMock::NotFound,
+            &DbMock {
+                sanctions_db: SanctionsDbMock::NotFound,
+                ..Default::default()
+            },
         )
         .unwrap_err();
 

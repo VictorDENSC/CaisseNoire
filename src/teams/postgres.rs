@@ -41,14 +41,14 @@ mod tests {
 
     use super::super::models::{Rule, RuleCategory, RuleKind, TimeUnit};
     use super::*;
-    use crate::database::postgres::test_utils::{create_default_team, DbConnectionBuilder};
+    use crate::test_utils::postgres::{insert_default_team, DbConnectionBuilder};
 
     #[test]
     fn test_get_team() {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_team = create_default_team(&conn, None);
+            let new_team = insert_default_team(&conn, None);
 
             let team = conn.get_team(new_team.id).unwrap();
 
@@ -101,7 +101,7 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_team = create_default_team(&conn, None);
+            let new_team = insert_default_team(&conn, None);
 
             let team = conn
                 .update_team(

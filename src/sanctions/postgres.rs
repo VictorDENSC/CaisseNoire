@@ -62,8 +62,9 @@ mod tests {
 
     use super::super::models::{ExtraInfo, SanctionInfo};
     use super::*;
-    use crate::database::postgres::test_utils::{
-        create_default_sanction, create_default_team, create_default_user, DbConnectionBuilder,
+    use crate::teams::interface::TeamsDb;
+    use crate::test_utils::postgres::{
+        insert_default_sanction, insert_default_team, insert_default_user, DbConnectionBuilder,
     };
 
     #[test]
@@ -72,13 +73,13 @@ mod tests {
 
         conn.deref().test_transaction::<_, Error, _>(|| {
             let sanction =
-                create_default_sanction(&conn, &create_default_user(&conn, None, None), None);
+                insert_default_sanction(&conn, &insert_default_user(&conn, None, None), None);
 
-            create_default_sanction(
+            insert_default_sanction(
                 &conn,
-                &create_default_user(
+                &insert_default_user(
                     &conn,
-                    Some(create_default_team(&conn, Some(String::from("Team_Test_2"))).id),
+                    Some(insert_default_team(&conn, Some(String::from("Team_Test_2"))).id),
                     None,
                 ),
                 None,
@@ -97,19 +98,19 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let default_user = create_default_user(&conn, None, None);
+            let default_user = insert_default_user(&conn, None, None);
 
-            let sanction = create_default_sanction(
+            let sanction = insert_default_sanction(
                 &conn,
                 &default_user,
                 Some(&NaiveDate::from_ymd(2019, 10, 13)),
             );
-            create_default_sanction(
+            insert_default_sanction(
                 &conn,
                 &default_user,
                 Some(&NaiveDate::from_ymd(2019, 10, 5)),
             );
-            create_default_sanction(
+            insert_default_sanction(
                 &conn,
                 &default_user,
                 Some(&NaiveDate::from_ymd(2019, 10, 25)),
@@ -137,7 +138,7 @@ mod tests {
 
         conn.deref().test_transaction::<_, Error, _>(|| {
             let sanction_id = Uuid::new_v4();
-            let user = create_default_user(&conn, None, None);
+            let user = insert_default_user(&conn, None, None);
             let team = conn.get_team(user.team_id).unwrap();
 
             let sanction: Sanction = conn
@@ -164,7 +165,7 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let default_user = create_default_user(&conn, None, None);
+            let default_user = insert_default_user(&conn, None, None);
             let mut sanction = CreateSanction {
                 id: Uuid::new_v4(),
                 team_id: Uuid::new_v4(),
@@ -211,8 +212,8 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let default_user = create_default_user(&conn, None, None);
-            let sanction = create_default_sanction(&conn, &default_user, None);
+            let default_user = insert_default_user(&conn, None, None);
+            let sanction = insert_default_sanction(&conn, &default_user, None);
 
             let sanction_deleted = conn.delete_sanction(sanction.team_id, sanction.id).unwrap();
 

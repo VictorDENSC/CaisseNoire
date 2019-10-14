@@ -43,56 +43,14 @@ mod tests {
 
     use super::*;
     use crate::api::models::{test_utils::RequestBuilder, ErrorKind};
-    use crate::database::postgres::DbError;
-
-    enum TeamsDbMock {
-        Success,
-        NotFound,
-        Unknown,
-    }
-
-    impl TeamsDb for TeamsDbMock {
-        fn get_team(&self, id: Uuid) -> Result<Team, DbError> {
-            match self {
-                TeamsDbMock::Success => Ok(Team {
-                    id: id,
-                    name: String::from("Test_team"),
-                    admin_password: String::from("password"),
-                    rules: vec![],
-                }),
-                TeamsDbMock::NotFound => Err(DbError::NotFound),
-                TeamsDbMock::Unknown => Err(DbError::Unknown),
-            }
-        }
-
-        fn create_team(&self, team: &Team) -> Result<Team, DbError> {
-            match self {
-                TeamsDbMock::Success => Ok(team.clone()),
-                TeamsDbMock::Unknown => Err(DbError::Unknown),
-                _ => unimplemented!(),
-            }
-        }
-
-        fn update_team(&self, id: Uuid, team: &UpdateTeam) -> Result<Team, DbError> {
-            match self {
-                TeamsDbMock::Success => Ok(Team {
-                    id,
-                    name: team.name.clone(),
-                    admin_password: team.admin_password.clone(),
-                    rules: team.rules.clone(),
-                }),
-                TeamsDbMock::NotFound => Err(DbError::NotFound),
-                TeamsDbMock::Unknown => Err(DbError::Unknown),
-            }
-        }
-    }
+    use crate::test_utils::routes::{DbMock, TeamsDbMock};
 
     #[test]
     fn test_get_team() {
         let id = Uuid::new_v4();
         let response = handle_request(
             &RequestBuilder::get(format!("/teams/{}", id)),
-            &TeamsDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap();
 
@@ -105,7 +63,10 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::get(format!("/teams/{}", id)),
-            &TeamsDbMock::NotFound,
+            &DbMock {
+                teams_db: TeamsDbMock::NotFound,
+                ..Default::default()
+            },
         )
         .unwrap_err();
 
@@ -113,7 +74,10 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::get(format!("/teams/{}", id)),
-            &TeamsDbMock::Unknown,
+            &DbMock {
+                teams_db: TeamsDbMock::Unknown,
+                ..Default::default()
+            },
         )
         .unwrap_err();
 
@@ -139,7 +103,7 @@ mod tests {
 
         let response = handle_request(
             &RequestBuilder::post(String::from("/teams"), &team),
-            &TeamsDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap();
 
@@ -157,7 +121,10 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::post(String::from("/teams"), &team),
-            &TeamsDbMock::Unknown,
+            &DbMock {
+                teams_db: TeamsDbMock::Unknown,
+                ..Default::default()
+            },
         )
         .unwrap_err();
 
@@ -167,7 +134,7 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::post(String::from("/teams"), &invalid_json),
-            &TeamsDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap_err();
 
@@ -185,7 +152,7 @@ mod tests {
 
         let response = handle_request(
             &RequestBuilder::post(format!("/teams/{}", id), &team),
-            &TeamsDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap();
 
@@ -203,7 +170,10 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::post(format!("/teams/{}", id), &team),
-            &TeamsDbMock::NotFound,
+            &DbMock {
+                teams_db: TeamsDbMock::NotFound,
+                ..Default::default()
+            },
         )
         .unwrap_err();
 
@@ -211,7 +181,10 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::post(format!("/teams/{}", id), &team),
-            &TeamsDbMock::Unknown,
+            &DbMock {
+                teams_db: TeamsDbMock::Unknown,
+                ..Default::default()
+            },
         )
         .unwrap_err();
 
