@@ -9,6 +9,8 @@ use super::{
     utils::{formatter::map_by_users, parameters::ParametersHandler},
 };
 use crate::api::models::ErrorResponse;
+use crate::database::postgres::DbError;
+use crate::teams::interface::TeamsDb;
 
 #[derive(Serialize, Debug, PartialEq)]
 #[serde(untagged)]
@@ -20,7 +22,7 @@ pub enum ResultWrapper {
 
 pub fn handle_request<T>(request: &Request, db: &T) -> Result<ResultWrapper, ErrorResponse>
 where
-    T: SanctionsDb,
+    T: SanctionsDb + TeamsDb,
 {
     router!(request,
     (GET) (/teams/{team_id: Uuid}/sanctions) => {
@@ -34,9 +36,26 @@ where
         }
     },
     (POST) (/teams/{team_id: Uuid}/sanctions) => {
-        let input: CreateSanction = (json_input::<UpdateSanctionRequest>(request)?, team_id).into();
+        let input = json_input::<UpdateSanctionRequest>(request)?;
 
-        let result = db.create_sanction(&input)?;
+        let rule = db
+            .get_team(team_id)
+            .map_err(|err| match err {
+                DbError::NotFound => {
+                    DbError::ForeignKeyViolation(String::from("The key team_id doesn't refer to anything"))
+                }
+                _ => err,
+            })?
+            .get_rule(input.sanction_info.associated_rule)
+            .ok_or(DbError::ForeignKeyViolation(String::from(
+                    "The key associated_rule doesn't refer to anything",
+            )))?;
+
+        let price = input.sanction_info.get_price(rule)?;
+
+        let sanction: CreateSanction = (input, team_id, price).into();
+
+        let result = db.create_sanction(&sanction)?;
 
         Ok(ResultWrapper::Sanction(result))
     },
@@ -72,6 +91,7 @@ mod tests {
                 associated_rule: Uuid::new_v4(),
                 extra_info: ExtraInfo::None,
             },
+            price: 0.0,
             created_at: created_at.unwrap_or(NaiveDate::from_ymd(2019, 10, 15)),
         }
     }
@@ -127,6 +147,7 @@ mod tests {
                     user_id: sanction.user_id,
                     team_id: sanction.team_id,
                     sanction_info: sanction.sanction_info.clone(),
+                    price: 0.0,
                     created_at: NaiveDate::from_ymd(2019, 10, 15),
                 }),
                 SanctionsDbMock::NotFound => {

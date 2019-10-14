@@ -1,6 +1,7 @@
 use diesel::{Insertable, Queryable};
 use diesel_as_jsonb::*;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use uuid::Uuid;
 
 use crate::database::schema::teams;
@@ -49,6 +50,12 @@ pub struct Team {
     pub name: String,
     pub admin_password: String,
     pub rules: Vec<Rule>,
+}
+
+impl Team {
+    pub fn get_rule(self, rule_id: Uuid) -> Option<Rule> {
+        self.rules.into_iter().find(|rule| rule.id == rule_id)
+    }
 }
 
 #[derive(AsChangeset)]
@@ -114,6 +121,17 @@ pub enum RuleKind {
         interval_in_time_unit: u32,
         time_unit: TimeUnit,
     },
+}
+
+impl fmt::Display for RuleKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RuleKind::Basic { .. } => write!(f, "BASIC"),
+            RuleKind::Multiplication { .. } => write!(f, "MULTIPLICATION"),
+            RuleKind::TimeMultiplication { .. } => write!(f, "TIME_MULTIPLICATION"),
+            RuleKind::RegularIntervals { .. } => write!(f, "REGULAR_INTERVALS"),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]

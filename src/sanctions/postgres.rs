@@ -11,34 +11,6 @@ use crate::database::{
     postgres::{DbConnection, DbError},
     schema::sanctions,
 };
-use crate::teams::interface::TeamsDb;
-use crate::users::interface::UsersDb;
-
-pub fn validate_sanction(conn: &DbConnection, sanction: &CreateSanction) -> Result<(), DbError> {
-    let team = conn.get_team(sanction.team_id).map_err(|err| match err {
-        DbError::NotFound => {
-            DbError::ForeignKeyViolation(String::from("The key team_id doesn't refer to anything"))
-        }
-        _ => err,
-    })?;
-
-    conn.get_user(team.id, sanction.user_id)
-        .map_err(|err| match err {
-            DbError::NotFound => DbError::ForeignKeyViolation(String::from(
-                "The key user_id doesn't refer to anything",
-            )),
-            _ => err,
-        })?;
-
-    team.rules
-        .iter()
-        .find(|rule| rule.id == sanction.sanction_info.associated_rule)
-        .ok_or(DbError::ForeignKeyViolation(String::from(
-            "The key associated_rule doesn't refer to anything",
-        )))?;
-
-    Ok(())
-}
 
 impl SanctionsDb for DbConnection {
     fn get_sanctions(
@@ -63,8 +35,6 @@ impl SanctionsDb for DbConnection {
     }
 
     fn create_sanction(&self, sanction: &CreateSanction) -> Result<Sanction, DbError> {
-        validate_sanction(self, sanction)?;
-
         let sanction: Sanction = diesel::insert_into(sanctions::table)
             .values(sanction)
             .get_result(self.deref())?;
@@ -179,6 +149,7 @@ mod tests {
                         associated_rule: team.rules[0].id,
                         extra_info: ExtraInfo::None,
                     },
+                    price: 0.0,
                 })
                 .unwrap();
 
@@ -202,6 +173,7 @@ mod tests {
                     associated_rule: Uuid::new_v4(),
                     extra_info: ExtraInfo::None,
                 },
+                price: 0.0,
             };
 
             let error = conn.create_sanction(&sanction).unwrap_err();

@@ -318,6 +318,7 @@ pub mod formatter {
                     associated_rule: Uuid::new_v4(),
                     extra_info: ExtraInfo::None,
                 },
+                price: 0.0,
                 created_at: NaiveDate::from_ymd(2019, 10, 5),
             }
         }

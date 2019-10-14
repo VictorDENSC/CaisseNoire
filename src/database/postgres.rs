@@ -139,6 +139,7 @@ pub mod test_utils {
                 sanctions::id.eq(Uuid::new_v4()),
                 sanctions::user_id.eq(user.id),
                 sanctions::team_id.eq(user.team_id),
+                sanctions::price.eq(0.0),
                 sanctions::sanction_info.eq(SanctionInfo {
                     associated_rule: Uuid::new_v4(),
                     extra_info: ExtraInfo::None,

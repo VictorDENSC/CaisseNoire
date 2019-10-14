@@ -2,7 +2,10 @@ use rouille::input::json::JsonError;
 use serde::Serialize;
 
 use crate::database::postgres::DbError;
-use crate::sanctions::utils::parameters::{ParameterError, ParameterErrorKind};
+use crate::sanctions::{
+    models::SanctionInfoError,
+    utils::parameters::{ParameterError, ParameterErrorKind},
+};
 
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
@@ -36,6 +39,7 @@ pub enum ErrorKind {
     BadReference,
     DuplicatedField,
     BadParameter,
+    NotValid,
 }
 
 impl ErrorKind {
@@ -48,6 +52,7 @@ impl ErrorKind {
             ErrorKind::BadReference => 400,
             ErrorKind::DuplicatedField => 400,
             ErrorKind::BadParameter => 400,
+            ErrorKind::NotValid => 400,
         }
     }
 }
@@ -81,6 +86,18 @@ impl From<DbError> for ErrorResponse {
                 kind: ErrorKind::DuplicatedField,
                 description,
             },
+        }
+    }
+}
+
+impl From<SanctionInfoError> for ErrorResponse {
+    fn from(error: SanctionInfoError) -> Self {
+        ErrorResponse {
+            kind: ErrorKind::NotValid,
+            description: format!(
+                "The rule {} has the kind {} which can't be associated with {}",
+                error.associated_rule_name, error.associated_rule_kind, error.extra_info
+            ),
         }
     }
 }

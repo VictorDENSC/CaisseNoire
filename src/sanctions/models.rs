@@ -2,10 +2,11 @@ use chrono::naive::NaiveDate;
 use diesel::{Insertable, Queryable};
 use diesel_as_jsonb::AsJsonb;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use uuid::Uuid;
 
 use crate::database::schema::sanctions;
-use crate::teams::models::RuleKind;
+use crate::teams::models::{Rule, RuleKind};
 
 #[derive(Deserialize)]
 pub struct UpdateSanctionRequest {
@@ -14,13 +15,16 @@ pub struct UpdateSanctionRequest {
     pub sanction_info: SanctionInfo,
 }
 
-impl From<(UpdateSanctionRequest, Uuid)> for CreateSanction {
-    fn from((update_request, team_id): (UpdateSanctionRequest, Uuid)) -> CreateSanction {
+impl From<(UpdateSanctionRequest, Uuid, f32)> for CreateSanction {
+    fn from(
+        (update_request, team_id, price): (UpdateSanctionRequest, Uuid, f32),
+    ) -> CreateSanction {
         CreateSanction {
             id: update_request.id.unwrap_or(Uuid::new_v4()),
             user_id: update_request.user_id,
             team_id,
             sanction_info: update_request.sanction_info,
+            price,
         }
     }
 }
@@ -31,6 +35,7 @@ pub struct Sanction {
     pub user_id: Uuid,
     pub team_id: Uuid,
     pub sanction_info: SanctionInfo,
+    pub price: f32,
     pub created_at: NaiveDate,
 }
 
@@ -41,12 +46,45 @@ pub struct CreateSanction {
     pub user_id: Uuid,
     pub team_id: Uuid,
     pub sanction_info: SanctionInfo,
+    pub price: f32,
+}
+
+pub struct SanctionInfoError {
+    pub associated_rule_name: String,
+    pub associated_rule_kind: String,
+    pub extra_info: String,
 }
 
 #[derive(Debug, AsJsonb, Serialize, Deserialize, PartialEq, Clone)]
 pub struct SanctionInfo {
     pub associated_rule: Uuid,
     pub extra_info: ExtraInfo,
+}
+
+impl SanctionInfo {
+    pub fn get_price(&self, rule: Rule) -> Result<f32, SanctionInfoError> {
+        match self.extra_info {
+            ExtraInfo::None => match rule.kind {
+                RuleKind::Basic { price } => Ok(price),
+                _ => Err(()),
+            },
+            ExtraInfo::Multiplication { factor } => match rule.kind {
+                RuleKind::Multiplication {
+                    price_to_multiply, ..
+                } => Ok(price_to_multiply * (factor as f32)),
+                RuleKind::TimeMultiplication {
+                    price_per_time_unit,
+                    ..
+                } => Ok(price_per_time_unit * (factor as f32)),
+                _ => Err(()),
+            },
+        }
+        .map_err(|_| SanctionInfoError {
+            associated_rule_name: rule.name,
+            associated_rule_kind: rule.kind.to_string(),
+            extra_info: self.extra_info.to_string(),
+        })
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -56,17 +94,11 @@ pub enum ExtraInfo {
     Multiplication { factor: u32 },
 }
 
-impl ExtraInfo {
-    pub fn r#match(&self, rule_kind: &RuleKind) -> bool {
+impl fmt::Display for ExtraInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ExtraInfo::None => match rule_kind {
-                RuleKind::Basic { .. } => true,
-                _ => false,
-            },
-            ExtraInfo::Multiplication { factor: _ } => match rule_kind {
-                RuleKind::Multiplication { .. } | RuleKind::TimeMultiplication { .. } => true,
-                _ => false,
-            },
+            ExtraInfo::None => write!(f, "NONE"),
+            ExtraInfo::Multiplication { .. } => write!(f, "MULTIPLICATION"),
         }
     }
 }
