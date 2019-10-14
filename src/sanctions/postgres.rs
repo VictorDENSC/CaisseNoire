@@ -63,15 +63,13 @@ impl SanctionsDb for DbConnection {
     }
 
     fn create_sanction(&self, sanction: &CreateSanction) -> Result<Sanction, DbError> {
-        self.deref().transaction::<Sanction, DbError, _>(|| {
-            validate_sanction(self, sanction)?;
+        validate_sanction(self, sanction)?;
 
-            let sanction: Sanction = diesel::insert_into(sanctions::table)
-                .values(sanction)
-                .get_result(self.deref())?;
+        let sanction: Sanction = diesel::insert_into(sanctions::table)
+            .values(sanction)
+            .get_result(self.deref())?;
 
-            Ok(sanction)
-        })
+        Ok(sanction)
     }
 
     fn delete_sanction(&self, team_id: Uuid, sanction_id: Uuid) -> Result<Sanction, DbError> {
@@ -92,7 +90,7 @@ impl SanctionsDb for DbConnection {
 mod tests {
     use diesel::result::Error;
 
-    use super::super::models::{SanctionData, SanctionInfo};
+    use super::super::models::{ExtraInfo, SanctionInfo};
     use super::*;
     use crate::database::postgres::test_utils::{
         create_default_sanction, create_default_team, create_default_user, DbConnectionBuilder,
@@ -179,7 +177,7 @@ mod tests {
                     team_id: user.team_id,
                     sanction_info: SanctionInfo {
                         associated_rule: team.rules[0].id,
-                        sanction_data: SanctionData::Basic,
+                        extra_info: ExtraInfo::None,
                     },
                 })
                 .unwrap();
@@ -202,7 +200,7 @@ mod tests {
                 user_id: Uuid::new_v4(),
                 sanction_info: SanctionInfo {
                     associated_rule: Uuid::new_v4(),
-                    sanction_data: SanctionData::Basic,
+                    extra_info: ExtraInfo::None,
                 },
             };
 

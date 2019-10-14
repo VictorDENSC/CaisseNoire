@@ -74,7 +74,7 @@ pub mod test_utils {
 
     use super::super::schema::*;
     use super::*;
-    use crate::sanctions::models::{Sanction, SanctionData, SanctionInfo};
+    use crate::sanctions::models::{ExtraInfo, Sanction, SanctionInfo};
     use crate::teams::models::{Rule, RuleCategory, RuleKind, Team};
     use crate::users::models::User;
 
@@ -141,7 +141,7 @@ pub mod test_utils {
                 sanctions::team_id.eq(user.team_id),
                 sanctions::sanction_info.eq(SanctionInfo {
                     associated_rule: Uuid::new_v4(),
-                    sanction_data: SanctionData::Basic,
+                    extra_info: ExtraInfo::None,
                 }),
                 sanctions::created_at
                     .eq(created_at

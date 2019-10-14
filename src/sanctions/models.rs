@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::database::schema::sanctions;
+use crate::teams::models::RuleKind;
 
 #[derive(Deserialize)]
 pub struct UpdateSanctionRequest {
@@ -45,13 +46,27 @@ pub struct CreateSanction {
 #[derive(Debug, AsJsonb, Serialize, Deserialize, PartialEq, Clone)]
 pub struct SanctionInfo {
     pub associated_rule: Uuid,
-    pub sanction_data: SanctionData,
+    pub extra_info: ExtraInfo,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE", tag = "type")]
-pub enum SanctionData {
-    Basic,
-    Multiplication { multiple: u32 },
-    TimeMultiplication { times_unit: u32 },
+pub enum ExtraInfo {
+    None,
+    Multiplication { factor: u32 },
+}
+
+impl ExtraInfo {
+    pub fn r#match(&self, rule_kind: &RuleKind) -> bool {
+        match self {
+            ExtraInfo::None => match rule_kind {
+                RuleKind::Basic { .. } => true,
+                _ => false,
+            },
+            ExtraInfo::Multiplication { factor: _ } => match rule_kind {
+                RuleKind::Multiplication { .. } | RuleKind::TimeMultiplication { .. } => true,
+                _ => false,
+            },
+        }
+    }
 }

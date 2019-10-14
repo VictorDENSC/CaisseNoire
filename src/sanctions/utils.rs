@@ -306,7 +306,7 @@ pub mod formatter {
     mod tests {
         use chrono::naive::NaiveDate;
 
-        use super::super::super::models::{SanctionData, SanctionInfo};
+        use super::super::super::models::{ExtraInfo, SanctionInfo};
         use super::*;
 
         fn create_default_sanction(user_id: Uuid) -> Sanction {
@@ -316,7 +316,7 @@ pub mod formatter {
                 team_id: Uuid::new_v4(),
                 sanction_info: SanctionInfo {
                     associated_rule: Uuid::new_v4(),
-                    sanction_data: SanctionData::Basic,
+                    extra_info: ExtraInfo::None,
                 },
                 created_at: NaiveDate::from_ymd(2019, 10, 5),
             }

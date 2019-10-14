@@ -54,7 +54,7 @@ mod tests {
     use chrono::naive::NaiveDate;
     use serde_json::json;
 
-    use super::super::models::{SanctionData, SanctionInfo};
+    use super::super::models::{ExtraInfo, SanctionInfo};
     use super::*;
     use crate::api::models::{test_utils::RequestBuilder, ErrorKind};
     use crate::database::postgres::DbError;
@@ -70,7 +70,7 @@ mod tests {
             team_id,
             sanction_info: SanctionInfo {
                 associated_rule: Uuid::new_v4(),
-                sanction_data: SanctionData::Basic,
+                extra_info: ExtraInfo::None,
             },
             created_at: created_at.unwrap_or(NaiveDate::from_ymd(2019, 10, 15)),
         }
@@ -234,8 +234,8 @@ mod tests {
             "user_id": Uuid::new_v4(),
             "sanction_info": {
                 "associated_rule": Uuid::new_v4(),
-                "sanction_data": {
-                    "type": "BASIC"
+                "extra_info": {
+                    "type": "NONE"
                 }
             }
         });
@@ -259,8 +259,8 @@ mod tests {
             "user_id": Uuid::new_v4(),
             "sanction_info": {
                 "associated_rule": Uuid::new_v4(),
-                "sanction_data": {
-                    "type": "BASIC"
+                "extra_info": {
+                    "type": "NONE"
                 }
             }
         });
