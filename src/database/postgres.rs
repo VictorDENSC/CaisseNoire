@@ -19,7 +19,6 @@ impl From<r2d2::Error> for DbError {
 
 impl From<diesel::result::Error> for DbError {
     fn from(error: diesel::result::Error) -> DbError {
-        println!("{:?}", error);
         match error {
             diesel::result::Error::NotFound => DbError::NotFound,
             diesel::result::Error::DatabaseError(kind, information) => match kind {
