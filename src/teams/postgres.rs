@@ -40,11 +40,11 @@ mod tests {
     use diesel::result::Error;
 
     use super::*;
-    use crate::test_utils::postgres::DbConnectionBuilder;
+    use crate::test_utils::postgres::init_connection;
 
     #[test]
     fn test_get_team() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
             let created_team = conn.create_team(&Team::default()).unwrap();
@@ -59,7 +59,7 @@ mod tests {
 
     #[test]
     fn test_get_unexisting_team() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         let error = conn.get_team(Uuid::new_v4()).unwrap_err();
 
@@ -68,7 +68,7 @@ mod tests {
 
     #[test]
     fn test_create_team() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
             conn.create_team(&Team::default()).unwrap();
@@ -79,7 +79,7 @@ mod tests {
 
     #[test]
     fn test_update_team() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
             let id = conn.create_team(&Team::default()).unwrap().id;
@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_update_unexisting_team() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         let error = conn
             .update_team(Uuid::new_v4(), &UpdateTeam::default())

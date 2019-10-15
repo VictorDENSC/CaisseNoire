@@ -58,11 +58,11 @@ mod tests {
 
     use super::*;
     use crate::teams::{interface::TeamsDb, models::Team};
-    use crate::test_utils::postgres::DbConnectionBuilder;
+    use crate::test_utils::postgres::init_connection;
 
     #[test]
     fn test_get_users() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
             let team_id = conn.create_team(&Team::default()).unwrap().id;
@@ -101,7 +101,7 @@ mod tests {
 
     #[test]
     fn test_get_user() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
             let team_id = conn.create_team(&Team::default()).unwrap().id;
@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn test_get_unexisting_user() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         let error = conn.get_user(Uuid::new_v4(), Uuid::new_v4()).unwrap_err();
 
@@ -133,7 +133,7 @@ mod tests {
 
     #[test]
     fn test_create_user() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
             let id = Uuid::new_v4();
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_create_uncorrect_user() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
             let error = conn.create_user(&User::default()).unwrap_err();
@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn test_update_user() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
             let team_id = conn.create_team(&Team::default()).unwrap().id;
@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_update_unexisting_user() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         let error = conn
             .update_user(Uuid::new_v4(), Uuid::new_v4(), &UpdateUser::default())

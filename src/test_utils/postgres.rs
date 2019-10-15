@@ -1,11 +1,10 @@
-use crate::database::postgres::*;
+use crate::database::postgres::{init_db_connection, DbConnection};
+use dotenv::dotenv;
+use std::env::var;
 
-//TODO
-pub struct DbConnectionBuilder;
+pub fn init_connection() -> DbConnection {
+    dotenv().ok();
 
-impl DbConnectionBuilder {
-    pub fn new() -> DbConnection {
-        init_db_connection("postgres://postgres:password@localhost/caisse_noire")
-            .expect("Something went wrong while getting the connection")
-    }
+    let database_url = var("DATABASE_URL").expect("DATABASE_URL must be set for tests");
+    init_db_connection(&database_url).expect("Something went wrong while getting the connection")
 }
