@@ -1,6 +1,7 @@
 use diesel::{Insertable, Queryable};
 use diesel_as_jsonb::*;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use uuid::Uuid;
 
 use crate::database::schema::teams;
@@ -42,7 +43,7 @@ impl From<UpdateTeamRequest> for UpdateTeam {
     }
 }
 
-#[derive(Debug, Queryable, Insertable, Serialize, PartialEq, Clone)]
+#[derive(Debug, Queryable, Insertable, Serialize, PartialEq, Clone, Default)]
 #[table_name = "teams"]
 pub struct Team {
     pub id: Uuid,
@@ -51,7 +52,13 @@ pub struct Team {
     pub rules: Vec<Rule>,
 }
 
-#[derive(AsChangeset)]
+impl Team {
+    pub fn get_rule(self, rule_id: Uuid) -> Option<Rule> {
+        self.rules.into_iter().find(|rule| rule.id == rule_id)
+    }
+}
+
+#[derive(AsChangeset, Default)]
 #[table_name = "teams"]
 pub struct UpdateTeam {
     pub name: String,
@@ -80,7 +87,7 @@ impl From<UpdateRuleRequest> for Rule {
     }
 }
 
-#[derive(AsJsonb, Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(AsJsonb, Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
 pub struct Rule {
     pub id: Uuid,
     pub name: String,
@@ -94,6 +101,12 @@ pub struct Rule {
 pub enum RuleCategory {
     GameDay,
     TrainingDay,
+}
+
+impl Default for RuleCategory {
+    fn default() -> RuleCategory {
+        RuleCategory::TrainingDay
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -114,6 +127,25 @@ pub enum RuleKind {
         interval_in_time_unit: u32,
         time_unit: TimeUnit,
     },
+}
+
+impl Default for RuleKind {
+    fn default() -> RuleKind {
+        RuleKind::Basic {
+            price: Default::default(),
+        }
+    }
+}
+
+impl fmt::Display for RuleKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RuleKind::Basic { .. } => write!(f, "BASIC"),
+            RuleKind::Multiplication { .. } => write!(f, "MULTIPLICATION"),
+            RuleKind::TimeMultiplication { .. } => write!(f, "TIME_MULTIPLICATION"),
+            RuleKind::RegularIntervals { .. } => write!(f, "REGULAR_INTERVALS"),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]

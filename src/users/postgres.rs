@@ -57,22 +57,43 @@ mod tests {
     use diesel::result::Error;
 
     use super::*;
-    use crate::database::postgres::test_utils::{
-        create_default_team, create_default_user, DbConnectionBuilder,
-    };
+    use crate::teams::{interface::TeamsDb, models::Team};
+    use crate::test_utils::postgres::init_connection;
 
     #[test]
     fn test_get_users() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_user = create_default_user(&conn, None, None);
-            let new_team = create_default_team(&conn, Some(String::from("Second_Test_Team")));
-            create_default_user(&conn, Some(new_team.id), None);
+            let team_id = conn.create_team(&Team::default()).unwrap().id;
+            let user = conn
+                .create_user(&User {
+                    team_id,
+                    ..Default::default()
+                })
+                .unwrap();
 
-            let users = conn.get_users(new_user.team_id).unwrap();
+            let team_id_2 = conn
+                .create_team(&Team {
+                    id: Uuid::new_v4(),
+                    name: String::from("CHBC"),
+                    ..Default::default()
+                })
+                .unwrap()
+                .id;
+            let user_2 = conn
+                .create_user(&User {
+                    id: Uuid::new_v4(),
+                    team_id: team_id_2,
+                    ..Default::default()
+                })
+                .unwrap();
 
-            assert_eq!(vec![new_user], users);
+            let users = conn.get_users(team_id).unwrap();
+            let users_2 = conn.get_users(team_id_2).unwrap();
+
+            assert_eq!(vec![user], users);
+            assert_eq!(vec![user_2], users_2);
 
             Ok(())
         })
@@ -80,14 +101,22 @@ mod tests {
 
     #[test]
     fn test_get_user() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_user = create_default_user(&conn, None, None);
+            let team_id = conn.create_team(&Team::default()).unwrap().id;
+            let user_id = conn
+                .create_user(&User {
+                    team_id,
+                    ..Default::default()
+                })
+                .unwrap()
+                .id;
 
-            let user = conn.get_user(new_user.team_id, new_user.id).unwrap();
+            let user = conn.get_user(team_id, user_id).unwrap();
 
-            assert_eq!(new_user, user);
+            assert_eq!(user_id, user.id);
+            assert_eq!(team_id, user.team_id);
 
             Ok(())
         })
@@ -95,7 +124,7 @@ mod tests {
 
     #[test]
     fn test_get_unexisting_user() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         let error = conn.get_user(Uuid::new_v4(), Uuid::new_v4()).unwrap_err();
 
@@ -104,23 +133,22 @@ mod tests {
 
     #[test]
     fn test_create_user() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let team = create_default_team(&conn, None);
+            let id = Uuid::new_v4();
+            let team_id = conn.create_team(&Team::default()).unwrap().id;
 
-            let new_user = User {
-                id: Uuid::new_v4(),
-                team_id: team.id,
-                firstname: String::from("firstname"),
-                lastname: String::from("lastname"),
-                nickname: None,
-                email: None,
-            };
+            let user = conn
+                .create_user(&User {
+                    id,
+                    team_id,
+                    ..Default::default()
+                })
+                .unwrap();
 
-            let user = conn.create_user(&new_user).unwrap();
-
-            assert_eq!(new_user, user);
+            assert_eq!(id, user.id);
+            assert_eq!(team_id, user.team_id);
 
             Ok(())
         })
@@ -128,19 +156,10 @@ mod tests {
 
     #[test]
     fn test_create_uncorrect_user() {
-        let conn = DbConnectionBuilder::new();
-
-        let mut user = User {
-            id: Uuid::new_v4(),
-            team_id: Uuid::new_v4(),
-            firstname: String::from("firstname"),
-            lastname: String::from("lastname"),
-            nickname: None,
-            email: Some(String::from("email@gmail.com")),
-        };
+        let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let error = conn.create_user(&user).unwrap_err();
+            let error = conn.create_user(&User::default()).unwrap_err();
 
             assert_eq!(
                 error,
@@ -153,11 +172,23 @@ mod tests {
         });
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let default_user = create_default_user(&conn, None, user.email.clone());
+            let team_id = conn.create_team(&Team::default()).unwrap().id;
 
-            user.team_id = default_user.team_id;
+            conn.create_user(&User {
+                team_id,
+                email: Some(String::from("email@gmail.com")),
+                ..Default::default()
+            })
+            .unwrap();
 
-            let error = conn.create_user(&user).unwrap_err();
+            let error = conn
+                .create_user(&User {
+                    id: Uuid::new_v4(),
+                    team_id,
+                    email: Some(String::from("email@gmail.com")),
+                    ..Default::default()
+                })
+                .unwrap_err();
 
             assert_eq!(
                 error,
@@ -172,26 +203,32 @@ mod tests {
 
     #[test]
     fn test_update_user() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let default_user = create_default_user(&conn, None, None);
+            let team_id = conn.create_team(&Team::default()).unwrap().id;
+            let user_id = conn
+                .create_user(&User {
+                    team_id,
+                    ..Default::default()
+                })
+                .unwrap()
+                .id;
 
             let user = conn
                 .update_user(
-                    default_user.team_id,
-                    default_user.id,
+                    team_id,
+                    user_id,
                     &UpdateUser {
                         firstname: String::from("name"),
-                        lastname: default_user.lastname,
-                        nickname: default_user.nickname,
-                        email: default_user.email,
+                        ..Default::default()
                     },
                 )
                 .unwrap();
 
+            assert_eq!(team_id, user.team_id);
+            assert_eq!(user_id, user.id);
             assert_eq!(user.firstname, String::from("name"));
-            assert_eq!(user.id, default_user.id);
 
             Ok(())
         })
@@ -199,19 +236,10 @@ mod tests {
 
     #[test]
     fn test_update_unexisting_user() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         let error = conn
-            .update_user(
-                Uuid::new_v4(),
-                Uuid::new_v4(),
-                &UpdateUser {
-                    firstname: String::from("firstname"),
-                    lastname: String::from("lastname"),
-                    nickname: None,
-                    email: None,
-                },
-            )
+            .update_user(Uuid::new_v4(), Uuid::new_v4(), &UpdateUser::default())
             .unwrap_err();
 
         assert_eq!(error, DbError::NotFound);

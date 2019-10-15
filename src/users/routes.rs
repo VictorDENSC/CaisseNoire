@@ -57,75 +57,7 @@ mod tests {
 
     use super::*;
     use crate::api::models::{test_utils::RequestBuilder, ErrorKind};
-    use crate::database::postgres::DbError;
-
-    fn default_user(team_id: Uuid, user_id: Uuid) -> User {
-        User {
-            id: user_id,
-            team_id,
-            firstname: String::from("firstname"),
-            lastname: String::from("lastname"),
-            nickname: None,
-            email: None,
-        }
-    }
-
-    enum UsersDbMock {
-        Success,
-        NotFound,
-        UnexistingTeam,
-        DuplicatedField,
-    }
-
-    impl UsersDb for UsersDbMock {
-        fn get_users(&self, team_id: Uuid) -> Result<Vec<User>, DbError> {
-            match self {
-                UsersDbMock::Success => Ok(vec![default_user(team_id, Uuid::new_v4())]),
-                _ => unimplemented!(),
-            }
-        }
-
-        fn get_user(&self, team_id: Uuid, user_id: Uuid) -> Result<User, DbError> {
-            match self {
-                UsersDbMock::Success => Ok(default_user(team_id, user_id)),
-                UsersDbMock::NotFound => Err(DbError::NotFound),
-                _ => unimplemented!(),
-            }
-        }
-
-        fn create_user(&self, user: &User) -> Result<User, DbError> {
-            match self {
-                UsersDbMock::Success => Ok(user.clone()),
-                UsersDbMock::UnexistingTeam => {
-                    Err(DbError::ForeignKeyViolation(String::from("Error")))
-                }
-                UsersDbMock::DuplicatedField => {
-                    Err(DbError::UniqueViolation(String::from("Error")))
-                }
-                _ => unimplemented!(),
-            }
-        }
-
-        fn update_user(
-            &self,
-            team_id: Uuid,
-            user_id: Uuid,
-            user: &UpdateUser,
-        ) -> Result<User, DbError> {
-            match self {
-                UsersDbMock::Success => Ok(User {
-                    id: user_id,
-                    team_id,
-                    firstname: user.firstname.clone(),
-                    lastname: user.lastname.clone(),
-                    nickname: user.nickname.clone(),
-                    email: user.email.clone(),
-                }),
-                UsersDbMock::NotFound => Err(DbError::NotFound),
-                _ => unimplemented!(),
-            }
-        }
-    }
+    use crate::test_utils::routes::{DbMock, UsersDbMock};
 
     #[test]
     fn test_get_users() {
@@ -133,7 +65,7 @@ mod tests {
 
         let response = json!(handle_request(
             &RequestBuilder::get(format!("/teams/{}/users", team_id)),
-            &UsersDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap());
 
@@ -147,7 +79,7 @@ mod tests {
 
         let response = json!(handle_request(
             &RequestBuilder::get(format!("/teams/{}/users/{}", team_id, user_id)),
-            &UsersDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap());
 
@@ -162,7 +94,10 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::get(format!("/teams/{}/users/{}", team_id, user_id)),
-            &UsersDbMock::NotFound,
+            &DbMock {
+                users_db: UsersDbMock::NotFound,
+                ..Default::default()
+            },
         )
         .unwrap_err();
 
@@ -183,7 +118,7 @@ mod tests {
 
         let response = json!(handle_request(
             &RequestBuilder::post(format!("/teams/{}/users", team_id), &user),
-            &UsersDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap());
 
@@ -206,7 +141,10 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::post(format!("/teams/{}/users", team_id), &user),
-            &UsersDbMock::UnexistingTeam,
+            &DbMock {
+                users_db: UsersDbMock::UnexistingTeam,
+                ..Default::default()
+            },
         )
         .unwrap_err();
 
@@ -214,7 +152,10 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::post(format!("/teams/{}/users", team_id), &user),
-            &UsersDbMock::DuplicatedField,
+            &DbMock {
+                users_db: UsersDbMock::DuplicatedField,
+                ..Default::default()
+            },
         )
         .unwrap_err();
 
@@ -224,7 +165,7 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::post(format!("/teams/{}/users", team_id), &invalid_json),
-            &UsersDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap_err();
 
@@ -247,7 +188,7 @@ mod tests {
 
         let response = json!(handle_request(
             &RequestBuilder::post(format!("/teams/{}/users/{}", team_id, user_id), &user),
-            &UsersDbMock::Success,
+            &DbMock::default(),
         )
         .unwrap());
 
@@ -271,7 +212,10 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::post(format!("/teams/{}/users/{}", team_id, user_id), &user),
-            &UsersDbMock::NotFound,
+            &DbMock {
+                users_db: UsersDbMock::NotFound,
+                ..Default::default()
+            },
         )
         .unwrap_err();
 
