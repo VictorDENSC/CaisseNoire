@@ -7,6 +7,27 @@ use uuid::Uuid;
 use crate::database::schema::teams;
 
 #[derive(Deserialize)]
+pub struct LoginRequest {
+    pub name: String,
+    pub admin_password: Option<String>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct LoginResponse {
+    pub id: Uuid,
+    pub admin_password: Option<String>,
+}
+
+impl From<(LoginRequest, Uuid)> for LoginResponse {
+    fn from((login_request, team_id): (LoginRequest, Uuid)) -> LoginResponse {
+        LoginResponse {
+            id: team_id,
+            admin_password: login_request.admin_password,
+        }
+    }
+}
+
+#[derive(Deserialize)]
 pub struct UpdateTeamRequest {
     pub id: Option<Uuid>,
     pub name: String,

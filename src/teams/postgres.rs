@@ -12,6 +12,19 @@ use crate::database::{
 };
 
 impl TeamsDb for DbConnection {
+    fn login(&self, name: &String, admin_password: &Option<String>) -> Result<Uuid, DbError> {
+        let team: Team = match admin_password {
+            Some(password) => teams::table
+                .filter(teams::name.eq(name).and(teams::admin_password.eq(password)))
+                .get_result(self.deref())?,
+            None => teams::table
+                .filter(teams::name.eq(name))
+                .get_result(self.deref())?,
+        };
+
+        Ok(team.id)
+    }
+
     fn get_team(&self, id: Uuid) -> Result<Team, DbError> {
         let team: Team = teams::table.find(id).get_result(self.deref())?;
 
@@ -41,6 +54,81 @@ mod tests {
 
     use super::*;
     use crate::test_utils::postgres::init_connection;
+
+    #[test]
+    fn test_login() {
+        let conn = init_connection();
+
+        conn.deref().test_transaction::<_, Error, _>(|| {
+            let created_team = conn
+                .create_team(&Team {
+                    name: String::from("CHBC"),
+                    ..Default::default()
+                })
+                .unwrap();
+
+            let team_id = conn.login(&created_team.name, &None).unwrap();
+
+            assert_eq!(team_id, created_team.id);
+
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_login_with_password() {
+        let conn = init_connection();
+
+        conn.deref().test_transaction::<_, Error, _>(|| {
+            let created_team = conn
+                .create_team(&Team {
+                    name: String::from("CHBC"),
+                    admin_password: String::from("password"),
+                    ..Default::default()
+                })
+                .unwrap();
+
+            let team_id = conn
+                .login(&created_team.name, &Some(created_team.admin_password))
+                .unwrap();
+
+            assert_eq!(team_id, created_team.id);
+
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_login_fails() {
+        let conn = init_connection();
+
+        conn.deref().test_transaction::<_, Error, _>(|| {
+            conn.create_team(&Team::default()).unwrap();
+
+            let error = conn.login(&String::from("CHBC"), &None).unwrap_err();
+
+            assert_eq!(error, DbError::NotFound);
+
+            Ok(())
+        });
+
+        conn.deref().test_transaction::<_, Error, _>(|| {
+            let created_team = conn
+                .create_team(&Team {
+                    name: String::from("CHBC"),
+                    ..Default::default()
+                })
+                .unwrap();
+
+            let error = conn
+                .login(&created_team.name, &Some(String::from("password")))
+                .unwrap_err();
+
+            assert_eq!(error, DbError::NotFound);
+
+            Ok(())
+        });
+    }
 
     #[test]
     fn test_get_team() {
