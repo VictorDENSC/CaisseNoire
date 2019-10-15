@@ -39,20 +39,19 @@ impl TeamsDb for DbConnection {
 mod tests {
     use diesel::result::Error;
 
-    use super::super::models::{Rule, RuleCategory, RuleKind, TimeUnit};
     use super::*;
-    use crate::test_utils::postgres::{insert_default_team, DbConnectionBuilder};
+    use crate::test_utils::postgres::DbConnectionBuilder;
 
     #[test]
     fn test_get_team() {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_team = insert_default_team(&conn, None);
+            let created_team = conn.create_team(&Team::default()).unwrap();
 
-            let team = conn.get_team(new_team.id).unwrap();
+            let team = conn.get_team(created_team.id).unwrap();
 
-            assert_eq!(team, new_team);
+            assert_eq!(team, created_team);
 
             Ok(())
         });
@@ -72,25 +71,7 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let team = Team {
-                id: Uuid::new_v4(),
-                name: String::from("Team_Test"),
-                admin_password: String::from("password"),
-                rules: vec![Rule {
-                    id: Uuid::new_v4(),
-                    name: String::from("Rule_Test"),
-                    category: RuleCategory::TrainingDay,
-                    description: String::from("This is a description !"),
-                    kind: RuleKind::TimeMultiplication {
-                        price_per_time_unit: 0.2,
-                        time_unit: TimeUnit::Minute,
-                    },
-                }],
-            };
-
-            let team_created = conn.create_team(&team).unwrap();
-
-            assert_eq!(team_created, team);
+            conn.create_team(&Team::default()).unwrap();
 
             Ok(())
         })
@@ -101,21 +82,22 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_team = insert_default_team(&conn, None);
+            let id = conn.create_team(&Team::default()).unwrap().id;
+
+            let name = String::from("New name");
 
             let team = conn
                 .update_team(
-                    new_team.id,
+                    id,
                     &UpdateTeam {
-                        name: String::from("New name"),
-                        admin_password: String::from("new_password"),
-                        rules: new_team.rules,
+                        name: name.clone(),
+                        ..Default::default()
                     },
                 )
                 .unwrap();
 
-            assert_eq!(&team.name, "New name");
-            assert_eq!(&team.admin_password, "new_password");
+            assert_eq!(id, team.id);
+            assert_eq!(team.name, name);
 
             Ok(())
         });
@@ -126,14 +108,7 @@ mod tests {
         let conn = DbConnectionBuilder::new();
 
         let error = conn
-            .update_team(
-                Uuid::new_v4(),
-                &UpdateTeam {
-                    name: String::from(""),
-                    admin_password: String::from(""),
-                    rules: vec![],
-                },
-            )
+            .update_team(Uuid::new_v4(), &UpdateTeam::default())
             .unwrap_err();
 
         assert_eq!(error, DbError::NotFound);

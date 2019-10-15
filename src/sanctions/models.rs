@@ -25,6 +25,7 @@ impl From<(UpdateSanctionRequest, Uuid, f32)> for CreateSanction {
             team_id,
             sanction_info: update_request.sanction_info,
             price,
+            created_at: None,
         }
     }
 }
@@ -39,7 +40,20 @@ pub struct Sanction {
     pub created_at: NaiveDate,
 }
 
-#[derive(Insertable)]
+impl Default for Sanction {
+    fn default() -> Sanction {
+        Sanction {
+            id: Default::default(),
+            user_id: Default::default(),
+            team_id: Default::default(),
+            sanction_info: Default::default(),
+            price: Default::default(),
+            created_at: NaiveDate::from_ymd(2019, 10, 5),
+        }
+    }
+}
+
+#[derive(Insertable, Default)]
 #[table_name = "sanctions"]
 pub struct CreateSanction {
     pub id: Uuid,
@@ -47,6 +61,7 @@ pub struct CreateSanction {
     pub team_id: Uuid,
     pub sanction_info: SanctionInfo,
     pub price: f32,
+    pub created_at: Option<NaiveDate>,
 }
 
 pub struct SanctionInfoError {
@@ -55,7 +70,7 @@ pub struct SanctionInfoError {
     pub extra_info: String,
 }
 
-#[derive(Debug, AsJsonb, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, AsJsonb, Serialize, Deserialize, PartialEq, Clone, Default)]
 pub struct SanctionInfo {
     pub associated_rule: Uuid,
     pub extra_info: ExtraInfo,
@@ -92,6 +107,12 @@ impl SanctionInfo {
 pub enum ExtraInfo {
     None,
     Multiplication { factor: u32 },
+}
+
+impl Default for ExtraInfo {
+    fn default() -> ExtraInfo {
+        ExtraInfo::None
+    }
 }
 
 impl fmt::Display for ExtraInfo {

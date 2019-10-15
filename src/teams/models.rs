@@ -43,7 +43,7 @@ impl From<UpdateTeamRequest> for UpdateTeam {
     }
 }
 
-#[derive(Debug, Queryable, Insertable, Serialize, PartialEq, Clone)]
+#[derive(Debug, Queryable, Insertable, Serialize, PartialEq, Clone, Default)]
 #[table_name = "teams"]
 pub struct Team {
     pub id: Uuid,
@@ -58,7 +58,7 @@ impl Team {
     }
 }
 
-#[derive(AsChangeset)]
+#[derive(AsChangeset, Default)]
 #[table_name = "teams"]
 pub struct UpdateTeam {
     pub name: String,
@@ -87,7 +87,7 @@ impl From<UpdateRuleRequest> for Rule {
     }
 }
 
-#[derive(AsJsonb, Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(AsJsonb, Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
 pub struct Rule {
     pub id: Uuid,
     pub name: String,
@@ -101,6 +101,12 @@ pub struct Rule {
 pub enum RuleCategory {
     GameDay,
     TrainingDay,
+}
+
+impl Default for RuleCategory {
+    fn default() -> RuleCategory {
+        RuleCategory::TrainingDay
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -121,6 +127,14 @@ pub enum RuleKind {
         interval_in_time_unit: u32,
         time_unit: TimeUnit,
     },
+}
+
+impl Default for RuleKind {
+    fn default() -> RuleKind {
+        RuleKind::Basic {
+            price: Default::default(),
+        }
+    }
 }
 
 impl fmt::Display for RuleKind {
