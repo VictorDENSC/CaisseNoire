@@ -15,6 +15,7 @@ pub struct DbMock {
 
 pub enum TeamsDbMock {
     Success,
+    SuccessWithRule(Rule),
     NotFound,
     Unknown,
 }
@@ -27,9 +28,14 @@ impl Default for TeamsDbMock {
 
 impl TeamsDb for DbMock {
     fn get_team(&self, id: Uuid) -> Result<Team, DbError> {
-        match self.teams_db {
+        match &self.teams_db {
             TeamsDbMock::Success => Ok(Team {
                 id: id,
+                ..Default::default()
+            }),
+            TeamsDbMock::SuccessWithRule(rule) => Ok(Team {
+                id: id,
+                rules: vec![rule.clone()],
                 ..Default::default()
             }),
             TeamsDbMock::NotFound => Err(DbError::NotFound),
@@ -55,6 +61,7 @@ impl TeamsDb for DbMock {
             }),
             TeamsDbMock::NotFound => Err(DbError::NotFound),
             TeamsDbMock::Unknown => Err(DbError::Unknown),
+            _ => unimplemented!(),
         }
     }
 }
@@ -147,16 +154,19 @@ impl SanctionsDb for DbMock {
                 let basic_result = vec![
                     Sanction {
                         team_id,
+                        user_id: Uuid::new_v4(),
                         created_at: NaiveDate::from_ymd(2019, 10, 5),
                         ..Default::default()
                     },
                     Sanction {
                         team_id,
+                        user_id: Uuid::new_v4(),
                         created_at: NaiveDate::from_ymd(2019, 10, 15),
                         ..Default::default()
                     },
                     Sanction {
                         team_id,
+                        user_id: Uuid::new_v4(),
                         created_at: NaiveDate::from_ymd(2019, 11, 5),
                         ..Default::default()
                     },
@@ -180,7 +190,7 @@ impl SanctionsDb for DbMock {
                 user_id: sanction.user_id,
                 team_id: sanction.team_id,
                 sanction_info: sanction.sanction_info.clone(),
-                price: 0.0,
+                price: sanction.price,
                 created_at: NaiveDate::from_ymd(2019, 10, 15),
             }),
             SanctionsDbMock::NotFound => Err(DbError::ForeignKeyViolation(String::from("Error"))),

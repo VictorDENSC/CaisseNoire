@@ -74,7 +74,8 @@ mod tests {
 
     use super::*;
     use crate::api::models::{test_utils::RequestBuilder, ErrorKind};
-    use crate::test_utils::routes::{DbMock, SanctionsDbMock};
+    use crate::teams::models::{Rule, RuleKind};
+    use crate::test_utils::routes::{DbMock, SanctionsDbMock, TeamsDbMock};
 
     #[test]
     fn test_get_sanctions() {
@@ -86,7 +87,9 @@ mod tests {
         )
         .unwrap());
 
-        assert_eq!(response[0]["team_id"], json!(team_id));
+        for i in 0..3 {
+            assert_eq!(response[i]["team_id"], json!(team_id));
+        }
     }
 
     #[test]
@@ -161,35 +164,53 @@ mod tests {
     fn test_create_sanction() {
         let team_id = Uuid::new_v4();
 
+        let rule = Rule {
+            kind: RuleKind::Multiplication {
+                price_to_multiply: 3.5,
+            },
+            ..Default::default()
+        };
+
         let sanction = json!({
             "user_id": Uuid::new_v4(),
             "sanction_info": {
-                "associated_rule": Uuid::new_v4(),
+                "associated_rule": rule.id,
                 "extra_info": {
-                    "type": "NONE"
+                    "type": "MULTIPLICATION",
+                    "factor": 2
                 }
             }
         });
 
         let response = json!(handle_request(
             &RequestBuilder::post(format!("/teams/{}/sanctions", team_id), &sanction),
-            &DbMock::default(),
+            &DbMock {
+                teams_db: TeamsDbMock::SuccessWithRule(rule),
+                ..Default::default()
+            },
         )
         .unwrap());
 
         assert_eq!(response["team_id"], json!(team_id));
         assert_eq!(response["user_id"], sanction["user_id"]);
-        assert_eq!(response["sanction_info"], sanction["sanction_info"]);
+        assert_eq!(response["price"], json!(7.0));
     }
 
     #[test]
     fn test_create_sanction_fails() {
         let team_id = Uuid::new_v4();
 
+        let rule = Rule {
+            kind: RuleKind::Multiplication {
+                price_to_multiply: 3.5,
+            },
+            ..Default::default()
+        };
+
         let sanction = json!({
             "user_id": Uuid::new_v4(),
             "sanction_info": {
-                "associated_rule": Uuid::new_v4(),
+                "associated_rule": rule.id,
                 "extra_info": {
                     "type": "NONE"
                 }
@@ -198,14 +219,22 @@ mod tests {
 
         let error = handle_request(
             &RequestBuilder::post(format!("/teams/{}/sanctions", team_id), &sanction),
+            &DbMock::default(),
+        )
+        .unwrap_err();
+
+        assert_eq!(error.kind, ErrorKind::BadReference);
+
+        let error = handle_request(
+            &RequestBuilder::post(format!("/teams/{}/sanctions", team_id), &sanction),
             &DbMock {
-                sanctions_db: SanctionsDbMock::NotFound,
+                teams_db: TeamsDbMock::SuccessWithRule(rule),
                 ..Default::default()
             },
         )
         .unwrap_err();
 
-        assert_eq!(error.kind, ErrorKind::BadReference);
+        assert_eq!(error.kind, ErrorKind::NotValid);
 
         let invalid_json = json!({});
 
