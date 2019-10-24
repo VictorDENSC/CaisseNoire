@@ -7,6 +7,7 @@ use super::{
     models::{UpdateUser, UpdateUserRequest, User},
 };
 use crate::api::models::ErrorResponse;
+use crate::teams::interface::TeamsDb;
 
 #[derive(Serialize, Debug, PartialEq)]
 #[serde(untagged)]
@@ -15,10 +16,31 @@ pub enum ResultWrapper {
     User(User),
 }
 
+fn authenticated_endpoint<T>(request: &Request, db: &T, team_id: Uuid) -> Result<(), ErrorResponse>
+where
+    T: TeamsDb,
+{
+    let team = db
+        .get_team(team_id)
+        .map_err(|_| ErrorResponse::not_found())?;
+
+    let header = request
+        .header("AUTHORIZATION")
+        .ok_or(ErrorResponse::not_found())?;
+
+    println!("{}", header);
+
+    if header == format!("Bearer {}", team.admin_password) {
+        Ok(())
+    } else {
+        Err(ErrorResponse::not_found())
+    }
+}
+
 #[allow(clippy::cognitive_complexity)]
 pub fn handle_request<T>(request: &Request, db: &T) -> Result<ResultWrapper, ErrorResponse>
 where
-    T: UsersDb,
+    T: UsersDb + TeamsDb,
 {
     router!(request,
         (GET) (/teams/{team_id: Uuid}/users) => {
@@ -27,6 +49,8 @@ where
             Ok(ResultWrapper::Users(result))
         },
         (POST) (/teams/{team_id: Uuid}/users) => {
+            authenticated_endpoint(request, db, team_id)?;
+
             let input: User = (json_input::<UpdateUserRequest>(request)?, team_id).into();
 
             let result = db.create_user(&input)?;
