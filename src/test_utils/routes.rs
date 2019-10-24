@@ -27,6 +27,14 @@ impl Default for TeamsDbMock {
 }
 
 impl TeamsDb for DbMock {
+    fn login(&self, _name: &String, _admin_password: &Option<String>) -> Result<Uuid, DbError> {
+        match self.teams_db {
+            TeamsDbMock::Success => Ok(Uuid::new_v4()),
+            TeamsDbMock::NotFound => Err(DbError::NotFound),
+            _ => unimplemented!()
+        }
+    }
+
     fn get_team(&self, id: Uuid) -> Result<Team, DbError> {
         match &self.teams_db {
             TeamsDbMock::Success => Ok(Team {

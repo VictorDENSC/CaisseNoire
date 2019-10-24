@@ -12,7 +12,7 @@ use crate::api::models::ErrorResponse;
 use crate::database::postgres::DbError;
 use crate::teams::interface::TeamsDb;
 
-#[derive(Serialize, Debug, PartialEq)]
+#[derive(Serialize, Debug)]
 #[serde(untagged)]
 pub enum ResultWrapper {
     Sanctions(Vec<Sanction>),
