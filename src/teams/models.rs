@@ -143,10 +143,8 @@ pub enum RuleKind {
         price_per_time_unit: f32,
         time_unit: TimeUnit,
     },
-    RegularIntervals {
+    Monthly {
         price: f32,
-        interval_in_time_unit: u32,
-        time_unit: TimeUnit,
     },
 }
 
@@ -164,7 +162,7 @@ impl fmt::Display for RuleKind {
             RuleKind::Basic { .. } => write!(f, "BASIC"),
             RuleKind::Multiplication { .. } => write!(f, "MULTIPLICATION"),
             RuleKind::TimeMultiplication { .. } => write!(f, "TIME_MULTIPLICATION"),
-            RuleKind::RegularIntervals { .. } => write!(f, "REGULAR_INTERVALS"),
+            RuleKind::Monthly { .. } => write!(f, "MONTHLY"),
         }
     }
 }
