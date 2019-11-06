@@ -1,9 +1,31 @@
 use diesel::{Insertable, Queryable};
 use diesel_as_jsonb::*;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use uuid::Uuid;
 
 use crate::database::schema::teams;
+
+#[derive(Deserialize)]
+pub struct LoginRequest {
+    pub name: String,
+    pub admin_password: Option<String>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct LoginResponse {
+    pub id: Uuid,
+    pub admin_password: Option<String>,
+}
+
+impl From<(LoginRequest, Uuid)> for LoginResponse {
+    fn from((login_request, team_id): (LoginRequest, Uuid)) -> LoginResponse {
+        LoginResponse {
+            id: team_id,
+            admin_password: login_request.admin_password,
+        }
+    }
+}
 
 #[derive(Deserialize)]
 pub struct UpdateTeamRequest {
@@ -42,7 +64,7 @@ impl From<UpdateTeamRequest> for UpdateTeam {
     }
 }
 
-#[derive(Debug, Queryable, Insertable, Serialize, PartialEq, Clone)]
+#[derive(Debug, Queryable, Insertable, Serialize, PartialEq, Clone, Default)]
 #[table_name = "teams"]
 pub struct Team {
     pub id: Uuid,
@@ -51,7 +73,13 @@ pub struct Team {
     pub rules: Vec<Rule>,
 }
 
-#[derive(AsChangeset)]
+impl Team {
+    pub fn get_rule(self, rule_id: Uuid) -> Option<Rule> {
+        self.rules.into_iter().find(|rule| rule.id == rule_id)
+    }
+}
+
+#[derive(AsChangeset, Default)]
 #[table_name = "teams"]
 pub struct UpdateTeam {
     pub name: String,
@@ -80,7 +108,7 @@ impl From<UpdateRuleRequest> for Rule {
     }
 }
 
-#[derive(AsJsonb, Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(AsJsonb, Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
 pub struct Rule {
     pub id: Uuid,
     pub name: String,
@@ -96,6 +124,12 @@ pub enum RuleCategory {
     TrainingDay,
 }
 
+impl Default for RuleCategory {
+    fn default() -> RuleCategory {
+        RuleCategory::TrainingDay
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE", tag = "type")]
 pub enum RuleKind {
@@ -109,11 +143,28 @@ pub enum RuleKind {
         price_per_time_unit: f32,
         time_unit: TimeUnit,
     },
-    RegularIntervals {
+    Monthly {
         price: f32,
-        interval_in_time_unit: u32,
-        time_unit: TimeUnit,
     },
+}
+
+impl Default for RuleKind {
+    fn default() -> RuleKind {
+        RuleKind::Basic {
+            price: Default::default(),
+        }
+    }
+}
+
+impl fmt::Display for RuleKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RuleKind::Basic { .. } => write!(f, "BASIC"),
+            RuleKind::Multiplication { .. } => write!(f, "MULTIPLICATION"),
+            RuleKind::TimeMultiplication { .. } => write!(f, "TIME_MULTIPLICATION"),
+            RuleKind::Monthly { .. } => write!(f, "MONTHLY"),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]

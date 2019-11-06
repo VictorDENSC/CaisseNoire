@@ -4,6 +4,7 @@ table! {
         user_id -> Uuid,
         team_id -> Uuid,
         sanction_info -> Jsonb,
+        price -> Float4,
         created_at -> Date,
     }
 }

@@ -12,6 +12,19 @@ use crate::database::{
 };
 
 impl TeamsDb for DbConnection {
+    fn login(&self, name: &String, admin_password: &Option<String>) -> Result<Uuid, DbError> {
+        let team: Team = match admin_password {
+            Some(password) => teams::table
+                .filter(teams::name.eq(name).and(teams::admin_password.eq(password)))
+                .get_result(self.deref())?,
+            None => teams::table
+                .filter(teams::name.eq(name))
+                .get_result(self.deref())?,
+        };
+
+        Ok(team.id)
+    }
+
     fn get_team(&self, id: Uuid) -> Result<Team, DbError> {
         let team: Team = teams::table.find(id).get_result(self.deref())?;
 
@@ -39,20 +52,94 @@ impl TeamsDb for DbConnection {
 mod tests {
     use diesel::result::Error;
 
-    use super::super::models::{Rule, RuleCategory, RuleKind, TimeUnit};
     use super::*;
-    use crate::database::postgres::test_utils::{create_default_team, DbConnectionBuilder};
+    use crate::test_utils::postgres::init_connection;
+
+    #[test]
+    fn test_login() {
+        let conn = init_connection();
+
+        conn.deref().test_transaction::<_, Error, _>(|| {
+            let created_team = conn
+                .create_team(&Team {
+                    name: String::from("CHBC"),
+                    ..Default::default()
+                })
+                .unwrap();
+
+            let team_id = conn.login(&created_team.name, &None).unwrap();
+
+            assert_eq!(team_id, created_team.id);
+
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_login_with_password() {
+        let conn = init_connection();
+
+        conn.deref().test_transaction::<_, Error, _>(|| {
+            let created_team = conn
+                .create_team(&Team {
+                    name: String::from("CHBC"),
+                    admin_password: String::from("password"),
+                    ..Default::default()
+                })
+                .unwrap();
+
+            let team_id = conn
+                .login(&created_team.name, &Some(created_team.admin_password))
+                .unwrap();
+
+            assert_eq!(team_id, created_team.id);
+
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_login_fails() {
+        let conn = init_connection();
+
+        conn.deref().test_transaction::<_, Error, _>(|| {
+            conn.create_team(&Team::default()).unwrap();
+
+            let error = conn.login(&String::from("CHBC"), &None).unwrap_err();
+
+            assert_eq!(error, DbError::NotFound);
+
+            Ok(())
+        });
+
+        conn.deref().test_transaction::<_, Error, _>(|| {
+            let created_team = conn
+                .create_team(&Team {
+                    name: String::from("CHBC"),
+                    ..Default::default()
+                })
+                .unwrap();
+
+            let error = conn
+                .login(&created_team.name, &Some(String::from("password")))
+                .unwrap_err();
+
+            assert_eq!(error, DbError::NotFound);
+
+            Ok(())
+        });
+    }
 
     #[test]
     fn test_get_team() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_team = create_default_team(&conn, None);
+            let created_team = conn.create_team(&Team::default()).unwrap();
 
-            let team = conn.get_team(new_team.id).unwrap();
+            let team = conn.get_team(created_team.id).unwrap();
 
-            assert_eq!(team, new_team);
+            assert_eq!(team, created_team);
 
             Ok(())
         });
@@ -60,7 +147,7 @@ mod tests {
 
     #[test]
     fn test_get_unexisting_team() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         let error = conn.get_team(Uuid::new_v4()).unwrap_err();
 
@@ -69,28 +156,10 @@ mod tests {
 
     #[test]
     fn test_create_team() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let team = Team {
-                id: Uuid::new_v4(),
-                name: String::from("Team_Test"),
-                admin_password: String::from("password"),
-                rules: vec![Rule {
-                    id: Uuid::new_v4(),
-                    name: String::from("Rule_Test"),
-                    category: RuleCategory::TrainingDay,
-                    description: String::from("This is a description !"),
-                    kind: RuleKind::TimeMultiplication {
-                        price_per_time_unit: 0.2,
-                        time_unit: TimeUnit::Minute,
-                    },
-                }],
-            };
-
-            let team_created = conn.create_team(&team).unwrap();
-
-            assert_eq!(team_created, team);
+            conn.create_team(&Team::default()).unwrap();
 
             Ok(())
         })
@@ -98,24 +167,25 @@ mod tests {
 
     #[test]
     fn test_update_team() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
-            let new_team = create_default_team(&conn, None);
+            let id = conn.create_team(&Team::default()).unwrap().id;
+
+            let name = String::from("New name");
 
             let team = conn
                 .update_team(
-                    new_team.id,
+                    id,
                     &UpdateTeam {
-                        name: String::from("New name"),
-                        admin_password: String::from("new_password"),
-                        rules: new_team.rules,
+                        name: name.clone(),
+                        ..Default::default()
                     },
                 )
                 .unwrap();
 
-            assert_eq!(&team.name, "New name");
-            assert_eq!(&team.admin_password, "new_password");
+            assert_eq!(id, team.id);
+            assert_eq!(team.name, name);
 
             Ok(())
         });
@@ -123,17 +193,10 @@ mod tests {
 
     #[test]
     fn test_update_unexisting_team() {
-        let conn = DbConnectionBuilder::new();
+        let conn = init_connection();
 
         let error = conn
-            .update_team(
-                Uuid::new_v4(),
-                &UpdateTeam {
-                    name: String::from(""),
-                    admin_password: String::from(""),
-                    rules: vec![],
-                },
-            )
+            .update_team(Uuid::new_v4(), &UpdateTeam::default())
             .unwrap_err();
 
         assert_eq!(error, DbError::NotFound);

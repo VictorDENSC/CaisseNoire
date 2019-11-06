@@ -37,7 +37,7 @@ impl From<UpdateUserRequest> for UpdateUser {
     }
 }
 
-#[derive(Debug, Clone, Queryable, Insertable, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Queryable, Insertable, PartialEq, Serialize, Deserialize, Default)]
 #[table_name = "users"]
 pub struct User {
     pub id: Uuid,
@@ -48,7 +48,7 @@ pub struct User {
     pub email: Option<String>,
 }
 
-#[derive(AsChangeset)]
+#[derive(AsChangeset, Default)]
 #[table_name = "users"]
 pub struct UpdateUser {
     pub firstname: String,
