@@ -1,0 +1,46 @@
+name: Pull Request - Dev
+
+on:
+  pull_request:
+    types: [opened]
+
+    branches-ignore:
+      - staging
+      - master
+
+jobs:
+  test:
+    name: Run Tests
+
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:11
+        ports:
+        - port:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: caisse_noire
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v1
+
+    - name: Install Postgres Dependency
+      run: sudo apt-get install libpq-dev 
+
+    - name: Install diesel_cli
+      run: cargo install diesel_cli --force --no-default-features --features postgres
+
+    - name: Run Migrations
+      run: diesel migration run
+
+    - name: Run tests
+      run: cargo test --verbose
+
+    env:
+      DATABASE_URL: postgres://postgres:password@localhost/caisse_noire
+      PORT: ${{ job.services.postgres.ports[port] }}
