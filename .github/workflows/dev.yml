@@ -4,9 +4,8 @@ on:
   pull_request:
     types: [opened, synchronize]
 
-    branches-ignore:
-      # - staging
-      - master
+    branches:
+      - staging
 
 jobs:
   test:
@@ -17,13 +16,13 @@ jobs:
     services:
       postgres:
         image: postgres:11
+        ports:
+        - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
           POSTGRES_DB: caisse_noire
-        ports:
-        - port:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
     - name: Checkout Repository
