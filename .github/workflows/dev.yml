@@ -2,7 +2,7 @@ name: Pull Request - Dev
 
 on:
   pull_request:
-    types: [opened, syncronized]
+    types: [opened, synchronize]
 
     branches-ignore:
       # - staging
