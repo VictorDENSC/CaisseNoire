@@ -2,10 +2,10 @@ name: Pull Request - Dev
 
 on:
   pull_request:
-    types: [opened]
+    types: [opened, syncronized]
 
     branches-ignore:
-      - staging
+      # - staging
       - master
 
 jobs:
