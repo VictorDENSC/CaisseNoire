@@ -31,7 +31,7 @@ impl TeamsDb for DbMock {
         match self.teams_db {
             TeamsDbMock::Success => Ok(Uuid::new_v4()),
             TeamsDbMock::NotFound => Err(DbError::NotFound),
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
 
