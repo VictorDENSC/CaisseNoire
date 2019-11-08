@@ -168,5 +168,4 @@ pub mod test_utils {
             Request::fake_http("DELETE", url, vec![RequestBuilder::json_header()], vec![])
         }
     }
-
 }

@@ -38,7 +38,7 @@ pub struct UpdateTeamRequest {
 impl From<UpdateTeamRequest> for Team {
     fn from(update_request: UpdateTeamRequest) -> Team {
         Team {
-            id: update_request.id.unwrap_or(Uuid::new_v4()),
+            id: update_request.id.unwrap_or_else(Uuid::new_v4),
             name: update_request.name,
             admin_password: update_request.admin_password,
             rules: update_request
@@ -99,7 +99,7 @@ pub struct UpdateRuleRequest {
 impl From<UpdateRuleRequest> for Rule {
     fn from(update_request: UpdateRuleRequest) -> Rule {
         Rule {
-            id: update_request.id.unwrap_or(Uuid::new_v4()),
+            id: update_request.id.unwrap_or_else(Uuid::new_v4),
             name: update_request.name,
             category: update_request.category,
             description: update_request.description,

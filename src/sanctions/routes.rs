@@ -30,9 +30,10 @@ where
 
         let result = db.get_sanctions(team_id, parameters_handler.date_interval())?;
 
-        match parameters_handler.must_be_formatted() {
-            true => Ok(ResultWrapper::MappedSanctions(map_by_users(result))),
-            false => Ok(ResultWrapper::Sanctions(result))
+        if parameters_handler.must_be_formatted() {
+            Ok(ResultWrapper::MappedSanctions(map_by_users(result)))
+        } else {
+            Ok(ResultWrapper::Sanctions(result))
         }
     },
     (POST) (/teams/{team_id: Uuid}/sanctions) => {
@@ -47,7 +48,7 @@ where
                 _ => err,
             })?
             .get_rule(input.sanction_info.associated_rule)
-            .ok_or(DbError::ForeignKeyViolation(String::from(
+            .ok_or_else(|| DbError::ForeignKeyViolation(String::from(
                     "The key associated_rule doesn't refer to anything",
             )))?;
 
