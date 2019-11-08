@@ -38,8 +38,27 @@ jobs:
       run: diesel migration run
 
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test
 
     env:
       DATABASE_URL: postgres://postgres:password@localhost/caisse_noire
       PORT: 5432
+
+  rustfmt:
+    name: Formatting
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v1
+
+      - name: Install Rustup
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+            override: true
+            components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt -- --check
