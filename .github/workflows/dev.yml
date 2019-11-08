@@ -55,3 +55,15 @@ jobs:
 
       - name: Check formatting
         run: cargo fmt -- --check
+  
+  clippy:
+    name: Clippy
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v1
+
+      - name: Run Clippy
+        run: cargo clippy --all-targets -- -D warnings
