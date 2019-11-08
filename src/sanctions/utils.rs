@@ -296,7 +296,7 @@ pub mod formatter {
             mapped_result
                 .entry(sanction.user_id)
                 .and_modify(|v: &mut Vec<Sanction>| v.push(sanction.clone()))
-                .or_insert(vec![sanction]);
+                .or_insert_with(|| vec![sanction]);
         });
 
         mapped_result

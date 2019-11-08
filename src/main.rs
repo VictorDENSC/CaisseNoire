@@ -24,12 +24,12 @@ fn with_cors(response: Response) -> Response {
 fn main() {
     let port = match extract_var("PORT") {
         Ok(port) => port,
-        Err(_) => panic!("PORT must be set"),
+        _ => panic!("PORT must be set"),
     };
 
     let database_url = match extract_var("DATABASE_URL") {
         Ok(database_url) => database_url,
-        Err(_) => panic!("DATABASE_URL must be set"),
+        _ => panic!("DATABASE_URL must be set"),
     };
 
     start_server(format!("0.0.0.0:{}", port), move |request| {
