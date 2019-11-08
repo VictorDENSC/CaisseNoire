@@ -1,0 +1,69 @@
+name: Pull Request - Dev
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+    branches:
+      - staging
+
+jobs:
+  test:
+    name: Run Tests
+
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:11
+        ports:
+        - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: caisse_noire
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v1
+
+    - name: Install Postgres Dependency
+      run: sudo apt-get install libpq-dev 
+
+    - name: Install diesel_cli
+      run: cargo install diesel_cli --force --no-default-features --features postgres
+
+    - name: Run Migrations
+      run: diesel migration run
+
+    - name: Run tests
+      run: cargo test
+
+    env:
+      DATABASE_URL: postgres://postgres:password@localhost/caisse_noire
+      PORT: 5432
+
+  rustfmt:
+    name: Formatting
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v1
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+  
+  clippy:
+    name: Clippy
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v1
+
+      - name: Run Clippy
+        run: cargo clippy --all-targets -- -D warnings

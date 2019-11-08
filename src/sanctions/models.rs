@@ -20,7 +20,7 @@ impl From<(UpdateSanctionRequest, Uuid, f32)> for CreateSanction {
         (update_request, team_id, price): (UpdateSanctionRequest, Uuid, f32),
     ) -> CreateSanction {
         CreateSanction {
-            id: update_request.id.unwrap_or(Uuid::new_v4()),
+            id: update_request.id.unwrap_or_else(Uuid::new_v4),
             user_id: update_request.user_id,
             team_id,
             sanction_info: update_request.sanction_info,

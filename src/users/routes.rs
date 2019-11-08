@@ -15,6 +15,7 @@ pub enum ResultWrapper {
     User(User),
 }
 
+#[allow(clippy::cognitive_complexity)]
 pub fn handle_request<T>(request: &Request, db: &T) -> Result<ResultWrapper, ErrorResponse>
 where
     T: UsersDb,

@@ -16,7 +16,7 @@ pub struct UpdateUserRequest {
 impl From<(UpdateUserRequest, Uuid)> for User {
     fn from((update_request, team_id): (UpdateUserRequest, Uuid)) -> User {
         User {
-            id: update_request.id.unwrap_or(Uuid::new_v4()),
+            id: update_request.id.unwrap_or_else(Uuid::new_v4),
             team_id,
             firstname: update_request.firstname,
             lastname: update_request.lastname,
