@@ -16,7 +16,7 @@ fn with_cors(response: Response) -> Response {
         Some(origin) => response
             .with_additional_header("Access-Control-Allow-Origin", origin)
             .with_additional_header("Access-Control-Allow-Headers", "content-type")
-            .with_additional_header("Access-Control-Request-Method", "GET, POST, DELETE"),
+            .with_additional_header("Access-Control-Allow-Methods", "GET, POST, DELETE"),
         None => response,
     }
 }
