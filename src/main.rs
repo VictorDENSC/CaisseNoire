@@ -1,7 +1,5 @@
 use rouille::{start_server, Response};
 use std::env::{var, VarError};
-use std::sync::Mutex;
-use std::{thread, time};
 
 use caisse_noire::api::{models::ErrorResponse, routes::handle_request};
 use caisse_noire::database::postgres::init_db_connection;
@@ -34,26 +32,13 @@ fn main() {
         _ => panic!("DATABASE_URL must be set"),
     };
 
-    let requests_counter = Mutex::new(0);
-
     start_server(format!("0.0.0.0:{}", port), move |request| {
-        while *requests_counter.lock().unwrap() > 1 {
-            let ten_millis = time::Duration::from_millis(10);
-            thread::sleep(ten_millis);
-        }
-
-        *requests_counter.lock().unwrap() += 1;
-
-        let response = with_cors(match init_db_connection(&database_url) {
+        with_cors(match init_db_connection(&database_url) {
             Ok(db_connection) => handle_request(request, &db_connection),
             Err(err) => {
                 let error_response: ErrorResponse = err.into();
                 error_response.into()
             }
-        });
-
-        *requests_counter.lock().unwrap() = -1;
-
-        response
+        })
     });
 }
