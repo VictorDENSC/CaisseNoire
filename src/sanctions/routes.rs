@@ -37,28 +37,43 @@ where
         }
     },
     (POST) (/teams/{team_id: Uuid}/sanctions) => {
-        let input = json_input::<UpdateSanctionRequest>(request)?;
+        let input = json_input::<Vec<UpdateSanctionRequest>>(request)?;
 
-        let rule = db
-            .get_team(team_id)
-            .map_err(|err| match err {
-                DbError::NotFound => {
-                    DbError::ForeignKeyViolation(String::from("The key team_id doesn't refer to anything"))
-                }
-                _ => err,
-            })?
-            .get_rule(input.sanction_info.associated_rule)
-            .ok_or_else(|| DbError::ForeignKeyViolation(String::from(
-                    "The key associated_rule doesn't refer to anything",
-            )))?;
+        let sanctions_or_errors: Vec<Result<CreateSanction, ErrorResponse>> = input.into_iter().map(|update_sanction| {
+            let rule = db
+                .get_team(team_id)
+                .map_err(|err| match err {
+                    DbError::NotFound => {
+                        DbError::ForeignKeyViolation(String::from("The key team_id doesn't refer to anything"))
+                    }
+                    _ => err,
+                })?
+                .get_rule(update_sanction.sanction_info.associated_rule)
+                .ok_or_else(|| DbError::ForeignKeyViolation(String::from(
+                        "The key associated_rule doesn't refer to anything",
+                )))?;
 
-        let price = input.sanction_info.get_price(rule)?;
+            let price = update_sanction.sanction_info.get_price(rule)?;
 
-        let sanction: CreateSanction = (input, team_id, price).into();
+            let sanction: CreateSanction = (update_sanction, team_id, price).into();
 
-        let result = db.create_sanction(&sanction)?;
+            Ok(sanction)
+        })
+        .collect();
 
-        Ok(ResultWrapper::Sanction(result))
+        let mut errors : Vec<ErrorResponse> = vec![];
+        let mut sanctions: Vec<CreateSanction> = vec![];
+
+        sanctions_or_errors.into_iter().for_each(|sanction_or_error| match sanction_or_error {
+            Ok(sanction)=>sanctions.push(sanction),
+            Err(error)=>errors.push(error)
+        });
+
+        match errors.first() {
+            Some(error)=>Err(error.clone()),
+            None=> {let result = db.create_sanctions(&sanctions)?;
+                Ok(ResultWrapper::Sanctions(result))}
+        }
     },
     (DELETE) (/teams/{team_id: Uuid}/sanctions/{sanction_id: Uuid}) => {
         let result = db.delete_sanction(team_id, sanction_id)?;

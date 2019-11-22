@@ -11,7 +11,7 @@ pub trait SanctionsDb {
         date_interval: Option<(NaiveDate, NaiveDate)>,
     ) -> Result<Vec<Sanction>, DbError>;
 
-    fn create_sanction(&self, sanction: &CreateSanction) -> Result<Sanction, DbError>;
+    fn create_sanctions(&self, sanctions: &Vec<CreateSanction>) -> Result<Vec<Sanction>, DbError>;
 
     fn delete_sanction(&self, team_id: Uuid, sanction_id: Uuid) -> Result<Sanction, DbError>;
 }

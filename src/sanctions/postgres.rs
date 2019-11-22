@@ -34,12 +34,12 @@ impl SanctionsDb for DbConnection {
         Ok(sanctions)
     }
 
-    fn create_sanction(&self, sanction: &CreateSanction) -> Result<Sanction, DbError> {
-        let sanction: Sanction = diesel::insert_into(sanctions::table)
-            .values(sanction)
-            .get_result(self.deref())?;
+    fn create_sanctions(&self, sanctions: &Vec<CreateSanction>) -> Result<Vec<Sanction>, DbError> {
+        let sanctions: Vec<Sanction> = diesel::insert_into(sanctions::table)
+            .values(sanctions)
+            .get_results(self.deref())?;
 
-        Ok(sanction)
+        Ok(sanctions)
     }
 
     fn delete_sanction(&self, team_id: Uuid, sanction_id: Uuid) -> Result<Sanction, DbError> {
@@ -78,11 +78,11 @@ mod tests {
                 .unwrap()
                 .id;
             let sanction = conn
-                .create_sanction(&CreateSanction {
+                .create_sanctions(&vec![CreateSanction {
                     user_id,
                     team_id,
                     ..Default::default()
-                })
+                }])
                 .unwrap();
 
             let team_id_2 = conn
@@ -102,12 +102,12 @@ mod tests {
                 .unwrap()
                 .id;
             let sanction_2 = conn
-                .create_sanction(&CreateSanction {
+                .create_sanctions(&vec![CreateSanction {
                     id: Uuid::new_v4(),
                     user_id: user_id_2,
                     team_id: team_id_2,
                     ..Default::default()
-                })
+                }])
                 .unwrap();
 
             let sanctions: Vec<Sanction> = conn.get_sanctions(team_id, None).unwrap();
@@ -135,12 +135,12 @@ mod tests {
                 .id;
 
             let sanction = conn
-                .create_sanction(&CreateSanction {
+                .create_sanctions(&vec![CreateSanction {
                     user_id,
                     team_id,
                     created_at: Some(NaiveDate::from_ymd(2019, 10, 13)),
                     ..Default::default()
-                })
+                }])
                 .unwrap();
 
             conn.create_sanction(&CreateSanction {
