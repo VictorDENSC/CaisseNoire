@@ -187,7 +187,7 @@ mod tests {
             ..Default::default()
         };
 
-        let sanction = json!({
+        let sanction = json!([{
             "user_id": Uuid::new_v4(),
             "sanction_info": {
                 "associated_rule": rule.id,
@@ -196,7 +196,7 @@ mod tests {
                     "factor": 2
                 }
             }
-        });
+        }]);
 
         let response = json!(handle_request(
             &RequestBuilder::post(format!("/teams/{}/sanctions", team_id), &sanction),
@@ -207,9 +207,9 @@ mod tests {
         )
         .unwrap());
 
-        assert_eq!(response["team_id"], json!(team_id));
-        assert_eq!(response["user_id"], sanction["user_id"]);
-        assert_eq!(response["price"], json!(7.0));
+        assert_eq!(response[0]["team_id"], json!(team_id));
+        assert_eq!(response[0]["user_id"], sanction[0]["user_id"]);
+        assert_eq!(response[0]["price"], json!(7.0));
     }
 
     #[test]
@@ -223,7 +223,7 @@ mod tests {
             ..Default::default()
         };
 
-        let sanction = json!({
+        let sanction = json!([{
             "user_id": Uuid::new_v4(),
             "sanction_info": {
                 "associated_rule": rule.id,
@@ -231,7 +231,7 @@ mod tests {
                     "type": "NONE"
                 }
             }
-        });
+        }]);
 
         let error = handle_request(
             &RequestBuilder::post(format!("/teams/{}/sanctions", team_id), &sanction),

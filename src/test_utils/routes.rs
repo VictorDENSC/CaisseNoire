@@ -191,16 +191,21 @@ impl SanctionsDb for DbMock {
         }
     }
 
-    fn create_sanction(&self, sanction: &CreateSanction) -> Result<Sanction, DbError> {
+    fn create_sanctions(&self, sanctions: &Vec<CreateSanction>) -> Result<Vec<Sanction>, DbError> {
         match self.sanctions_db {
-            SanctionsDbMock::Success => Ok(Sanction {
-                id: sanction.id,
-                user_id: sanction.user_id,
-                team_id: sanction.team_id,
-                sanction_info: sanction.sanction_info.clone(),
-                price: sanction.price,
-                created_at: NaiveDate::from_ymd(2019, 10, 15),
-            }),
+            SanctionsDbMock::Success => Ok(sanctions
+                .into_iter()
+                .map(|create_sanction| Sanction {
+                    id: create_sanction.id,
+                    user_id: create_sanction.user_id,
+                    team_id: create_sanction.team_id,
+                    sanction_info: create_sanction.sanction_info.clone(),
+                    price: create_sanction.price,
+                    created_at: create_sanction
+                        .created_at
+                        .unwrap_or(NaiveDate::from_ymd(2019, 10, 15)),
+                })
+                .collect()),
             SanctionsDbMock::NotFound => Err(DbError::ForeignKeyViolation(String::from("Error"))),
         }
     }
