@@ -39,7 +39,10 @@ where
     (POST) (/teams/{team_id: Uuid}/sanctions) => {
         let input = json_input::<Vec<UpdateSanctionRequest>>(request)?;
 
-        let sanctions_or_errors: Vec<Result<CreateSanction, ErrorResponse>> = input.into_iter().map(|update_sanction| {
+        let mut error : Option<ErrorResponse> = None;
+        let mut sanctions: Vec<CreateSanction> = vec![];
+
+        input.into_iter().map(|update_sanction| {
             let rule = db
                 .get_team(team_id)
                 .map_err(|err| match err {
@@ -59,20 +62,20 @@ where
 
             Ok(sanction)
         })
-        .collect();
-
-        let mut errors : Vec<ErrorResponse> = vec![];
-        let mut sanctions: Vec<CreateSanction> = vec![];
-
-        sanctions_or_errors.into_iter().for_each(|sanction_or_error| match sanction_or_error {
+        .for_each(|sanction_or_error| match sanction_or_error {
             Ok(sanction)=>sanctions.push(sanction),
-            Err(error)=>errors.push(error)
+            Err(err)=> match error {
+                Some(_)=>{},
+                None=>error=Some(err)
+            }
         });
 
-        match errors.first() {
-            Some(error)=>Err(error.clone()),
-            None=> {let result = db.create_sanctions(&sanctions)?;
-                Ok(ResultWrapper::Sanctions(result))}
+        match error {
+            Some(err)=>Err(err),
+            None=> {
+                let result = db.create_sanctions(&sanctions)?;
+                Ok(ResultWrapper::Sanctions(result))
+            }
         }
     },
     (DELETE) (/teams/{team_id: Uuid}/sanctions/{sanction_id: Uuid}) => {
