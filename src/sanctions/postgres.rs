@@ -34,7 +34,7 @@ impl SanctionsDb for DbConnection {
         Ok(sanctions)
     }
 
-    fn create_sanctions(&self, sanctions: &Vec<CreateSanction>) -> Result<Vec<Sanction>, DbError> {
+    fn create_sanctions(&self, sanctions: &[CreateSanction]) -> Result<Vec<Sanction>, DbError> {
         let sanctions: Vec<Sanction> = diesel::insert_into(sanctions::table)
             .values(sanctions)
             .get_results(self.deref())?;
@@ -78,7 +78,7 @@ mod tests {
                 .unwrap()
                 .id;
             let sanction = conn
-                .create_sanctions(&vec![CreateSanction {
+                .create_sanctions(&[CreateSanction {
                     user_id,
                     team_id,
                     ..Default::default()
@@ -102,7 +102,7 @@ mod tests {
                 .unwrap()
                 .id;
             let sanction_2 = conn
-                .create_sanctions(&vec![CreateSanction {
+                .create_sanctions(&[CreateSanction {
                     id: Uuid::new_v4(),
                     user_id: user_id_2,
                     team_id: team_id_2,
@@ -135,7 +135,7 @@ mod tests {
                 .id;
 
             let sanction = conn
-                .create_sanctions(&vec![CreateSanction {
+                .create_sanctions(&[CreateSanction {
                     user_id,
                     team_id,
                     created_at: Some(NaiveDate::from_ymd(2019, 10, 13)),
@@ -143,7 +143,7 @@ mod tests {
                 }])
                 .unwrap();
 
-            conn.create_sanctions(&vec![
+            conn.create_sanctions(&[
                 CreateSanction {
                     id: Uuid::new_v4(),
                     user_id,
@@ -195,7 +195,7 @@ mod tests {
                 .id;
 
             let sanctions = conn
-                .create_sanctions(&vec![CreateSanction {
+                .create_sanctions(&[CreateSanction {
                     id,
                     user_id,
                     team_id,
@@ -217,7 +217,7 @@ mod tests {
 
         conn.deref().test_transaction::<_, Error, _>(|| {
             let error = conn
-                .create_sanctions(&vec![CreateSanction::default()])
+                .create_sanctions(&[CreateSanction::default()])
                 .unwrap_err();
 
             assert_eq!(
@@ -234,7 +234,7 @@ mod tests {
             let team_id = conn.create_team(&Team::default()).unwrap().id;
 
             let error = conn
-                .create_sanctions(&vec![CreateSanction {
+                .create_sanctions(&[CreateSanction {
                     team_id,
                     ..Default::default()
                 }])
@@ -267,7 +267,7 @@ mod tests {
                 .id;
 
             let sanctions = conn
-                .create_sanctions(&vec![CreateSanction {
+                .create_sanctions(&[CreateSanction {
                     team_id,
                     user_id,
                     ..Default::default()

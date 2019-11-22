@@ -191,10 +191,10 @@ impl SanctionsDb for DbMock {
         }
     }
 
-    fn create_sanctions(&self, sanctions: &Vec<CreateSanction>) -> Result<Vec<Sanction>, DbError> {
+    fn create_sanctions(&self, sanctions: &[CreateSanction]) -> Result<Vec<Sanction>, DbError> {
         match self.sanctions_db {
             SanctionsDbMock::Success => Ok(sanctions
-                .into_iter()
+                .iter()
                 .map(|create_sanction| Sanction {
                     id: create_sanction.id,
                     user_id: create_sanction.user_id,
@@ -203,7 +203,7 @@ impl SanctionsDb for DbMock {
                     price: create_sanction.price,
                     created_at: create_sanction
                         .created_at
-                        .unwrap_or(NaiveDate::from_ymd(2019, 10, 15)),
+                        .unwrap_or_else(|| NaiveDate::from_ymd(2019, 10, 15)),
                 })
                 .collect()),
             SanctionsDbMock::NotFound => Err(DbError::ForeignKeyViolation(String::from("Error"))),
