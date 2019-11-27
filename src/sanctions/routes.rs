@@ -25,47 +25,67 @@ where
     T: SanctionsDb + TeamsDb,
 {
     router!(request,
-    (GET) (/teams/{team_id: Uuid}/sanctions) => {
-        let parameters_handler = ParametersHandler::from_request(request)?;
+        (GET) (/teams/{team_id: Uuid}/sanctions) => {
+            let parameters_handler = ParametersHandler::from_request(request)?;
 
-        let result = db.get_sanctions(team_id, parameters_handler.date_interval())?;
+            let result = db.get_sanctions(team_id, parameters_handler.date_interval())?;
 
-        if parameters_handler.must_be_formatted() {
-            Ok(ResultWrapper::MappedSanctions(map_by_users(result)))
-        } else {
-            Ok(ResultWrapper::Sanctions(result))
-        }
-    },
-    (POST) (/teams/{team_id: Uuid}/sanctions) => {
-        let input = json_input::<UpdateSanctionRequest>(request)?;
+            if parameters_handler.must_be_formatted() {
+                Ok(ResultWrapper::MappedSanctions(map_by_users(result)))
+            } else {
+                Ok(ResultWrapper::Sanctions(result))
+            }
+        },
+        (POST) (/teams/{team_id: Uuid}/sanctions) => {
+            let input = json_input::<Vec<UpdateSanctionRequest>>(request)?;
 
-        let rule = db
-            .get_team(team_id)
-            .map_err(|err| match err {
-                DbError::NotFound => {
-                    DbError::ForeignKeyViolation(String::from("The key team_id doesn't refer to anything"))
+            let mut error : Option<ErrorResponse> = None;
+            let mut sanctions: Vec<CreateSanction> = vec![];
+
+            input.into_iter().map(|update_sanction| {
+                let rule = db
+                    .get_team(team_id)
+                    .map_err(|err| match err {
+                        DbError::NotFound => {
+                            DbError::ForeignKeyViolation(String::from("The key team_id doesn't refer to anything"))
+                        }
+                        _ => err,
+                    })?
+                    .get_rule(update_sanction.sanction_info.associated_rule)
+                    .ok_or_else(|| DbError::ForeignKeyViolation(String::from(
+                            "The key associated_rule doesn't refer to anything",
+                    )))?;
+
+                let price = update_sanction.sanction_info.get_price(rule)?;
+
+                let sanction: CreateSanction = (update_sanction, team_id, price).into();
+
+                Ok(sanction)
+            })
+            .for_each(|sanction_or_error| match sanction_or_error {
+                Ok(sanction)=>sanctions.push(sanction),
+                Err(err)=> match error {
+                    Some(_)=>{},
+                    None=>error=Some(err)
                 }
-                _ => err,
-            })?
-            .get_rule(input.sanction_info.associated_rule)
-            .ok_or_else(|| DbError::ForeignKeyViolation(String::from(
-                    "The key associated_rule doesn't refer to anything",
-            )))?;
+            });
 
-        let price = input.sanction_info.get_price(rule)?;
+            match error {
+                Some(err)=>Err(err),
+                None=> {
+                    let result = db.create_sanctions(&sanctions)?;
+                    Ok(ResultWrapper::Sanctions(result))
+                }
+            }
+        },
+        (DELETE) (/teams/{team_id: Uuid}/sanctions/{sanction_id: Uuid}) => {
+            let result = db.delete_sanction(team_id, sanction_id)?;
 
-        let sanction: CreateSanction = (input, team_id, price).into();
-
-        let result = db.create_sanction(&sanction)?;
-
-        Ok(ResultWrapper::Sanction(result))
-    },
-    (DELETE) (/teams/{team_id: Uuid}/sanctions/{sanction_id: Uuid}) => {
-        let result = db.delete_sanction(team_id, sanction_id)?;
-
-        Ok(ResultWrapper::Sanction(result))
-    },
-    _ => Err(ErrorResponse::not_found())
+            Ok(ResultWrapper::Sanction(result))
+        },
+        _ => {
+            Err(ErrorResponse::not_found())
+        }
     )
 }
 
@@ -172,7 +192,7 @@ mod tests {
             ..Default::default()
         };
 
-        let sanction = json!({
+        let sanction = json!([{
             "user_id": Uuid::new_v4(),
             "sanction_info": {
                 "associated_rule": rule.id,
@@ -181,7 +201,7 @@ mod tests {
                     "factor": 2
                 }
             }
-        });
+        }]);
 
         let response = json!(handle_request(
             &RequestBuilder::post(format!("/teams/{}/sanctions", team_id), &sanction),
@@ -192,9 +212,9 @@ mod tests {
         )
         .unwrap());
 
-        assert_eq!(response["team_id"], json!(team_id));
-        assert_eq!(response["user_id"], sanction["user_id"]);
-        assert_eq!(response["price"], json!(7.0));
+        assert_eq!(response[0]["team_id"], json!(team_id));
+        assert_eq!(response[0]["user_id"], sanction[0]["user_id"]);
+        assert_eq!(response[0]["price"], json!(7.0));
     }
 
     #[test]
@@ -208,7 +228,7 @@ mod tests {
             ..Default::default()
         };
 
-        let sanction = json!({
+        let sanction = json!([{
             "user_id": Uuid::new_v4(),
             "sanction_info": {
                 "associated_rule": rule.id,
@@ -216,7 +236,7 @@ mod tests {
                     "type": "NONE"
                 }
             }
-        });
+        }]);
 
         let error = handle_request(
             &RequestBuilder::post(format!("/teams/{}/sanctions", team_id), &sanction),

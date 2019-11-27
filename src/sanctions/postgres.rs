@@ -34,12 +34,12 @@ impl SanctionsDb for DbConnection {
         Ok(sanctions)
     }
 
-    fn create_sanction(&self, sanction: &CreateSanction) -> Result<Sanction, DbError> {
-        let sanction: Sanction = diesel::insert_into(sanctions::table)
-            .values(sanction)
-            .get_result(self.deref())?;
+    fn create_sanctions(&self, sanctions: &[CreateSanction]) -> Result<Vec<Sanction>, DbError> {
+        let sanctions: Vec<Sanction> = diesel::insert_into(sanctions::table)
+            .values(sanctions)
+            .get_results(self.deref())?;
 
-        Ok(sanction)
+        Ok(sanctions)
     }
 
     fn delete_sanction(&self, team_id: Uuid, sanction_id: Uuid) -> Result<Sanction, DbError> {
@@ -78,11 +78,11 @@ mod tests {
                 .unwrap()
                 .id;
             let sanction = conn
-                .create_sanction(&CreateSanction {
+                .create_sanctions(&[CreateSanction {
                     user_id,
                     team_id,
                     ..Default::default()
-                })
+                }])
                 .unwrap();
 
             let team_id_2 = conn
@@ -102,19 +102,19 @@ mod tests {
                 .unwrap()
                 .id;
             let sanction_2 = conn
-                .create_sanction(&CreateSanction {
+                .create_sanctions(&[CreateSanction {
                     id: Uuid::new_v4(),
                     user_id: user_id_2,
                     team_id: team_id_2,
                     ..Default::default()
-                })
+                }])
                 .unwrap();
 
             let sanctions: Vec<Sanction> = conn.get_sanctions(team_id, None).unwrap();
             let sanctions_2: Vec<Sanction> = conn.get_sanctions(team_id_2, None).unwrap();
 
-            assert_eq!(vec![sanction], sanctions);
-            assert_eq!(vec![sanction_2], sanctions_2);
+            assert_eq!(sanction, sanctions);
+            assert_eq!(sanction_2, sanctions_2);
 
             Ok(())
         });
@@ -135,33 +135,33 @@ mod tests {
                 .id;
 
             let sanction = conn
-                .create_sanction(&CreateSanction {
+                .create_sanctions(&[CreateSanction {
                     user_id,
                     team_id,
                     created_at: Some(NaiveDate::from_ymd(2019, 10, 13)),
                     ..Default::default()
-                })
+                }])
                 .unwrap();
 
-            conn.create_sanction(&CreateSanction {
-                id: Uuid::new_v4(),
-                user_id,
-                team_id,
-                created_at: Some(NaiveDate::from_ymd(2019, 10, 5)),
-                ..Default::default()
-            })
+            conn.create_sanctions(&[
+                CreateSanction {
+                    id: Uuid::new_v4(),
+                    user_id,
+                    team_id,
+                    created_at: Some(NaiveDate::from_ymd(2019, 10, 5)),
+                    ..Default::default()
+                },
+                CreateSanction {
+                    id: Uuid::new_v4(),
+                    user_id,
+                    team_id,
+                    created_at: Some(NaiveDate::from_ymd(2019, 10, 25)),
+                    ..Default::default()
+                },
+            ])
             .unwrap();
 
-            conn.create_sanction(&CreateSanction {
-                id: Uuid::new_v4(),
-                user_id,
-                team_id,
-                created_at: Some(NaiveDate::from_ymd(2019, 10, 25)),
-                ..Default::default()
-            })
-            .unwrap();
-
-            let sanctions: Vec<Sanction> = conn
+            let returned_sanctions: Vec<Sanction> = conn
                 .get_sanctions(
                     team_id,
                     Some((
@@ -171,14 +171,14 @@ mod tests {
                 )
                 .unwrap();
 
-            assert_eq!(vec![sanction], sanctions);
+            assert_eq!(sanction, returned_sanctions);
 
             Ok(())
         })
     }
 
     #[test]
-    fn test_create_sanction() {
+    fn test_create_sanctions() {
         let conn = init_connection();
 
         conn.deref().test_transaction::<_, Error, _>(|| {
@@ -194,18 +194,18 @@ mod tests {
                 .unwrap()
                 .id;
 
-            let sanction = conn
-                .create_sanction(&CreateSanction {
+            let sanctions = conn
+                .create_sanctions(&[CreateSanction {
                     id,
                     user_id,
                     team_id,
                     ..Default::default()
-                })
+                }])
                 .unwrap();
 
-            assert_eq!(sanction.id, id);
-            assert_eq!(sanction.user_id, user_id);
-            assert_eq!(sanction.team_id, team_id);
+            assert_eq!(sanctions[0].id, id);
+            assert_eq!(sanctions[0].user_id, user_id);
+            assert_eq!(sanctions[0].team_id, team_id);
 
             Ok(())
         });
@@ -217,7 +217,7 @@ mod tests {
 
         conn.deref().test_transaction::<_, Error, _>(|| {
             let error = conn
-                .create_sanction(&CreateSanction::default())
+                .create_sanctions(&[CreateSanction::default()])
                 .unwrap_err();
 
             assert_eq!(
@@ -234,10 +234,10 @@ mod tests {
             let team_id = conn.create_team(&Team::default()).unwrap().id;
 
             let error = conn
-                .create_sanction(&CreateSanction {
+                .create_sanctions(&[CreateSanction {
                     team_id,
                     ..Default::default()
-                })
+                }])
                 .unwrap_err();
 
             assert_eq!(
@@ -266,16 +266,16 @@ mod tests {
                 .unwrap()
                 .id;
 
-            let sanction = conn
-                .create_sanction(&CreateSanction {
+            let sanctions = conn
+                .create_sanctions(&[CreateSanction {
                     team_id,
                     user_id,
                     ..Default::default()
-                })
+                }])
                 .unwrap();
 
-            let sanction_deleted = conn.delete_sanction(team_id, sanction.id).unwrap();
-            assert_eq!(sanction.id, sanction_deleted.id);
+            let sanction_deleted = conn.delete_sanction(team_id, sanctions[0].id).unwrap();
+            assert_eq!(sanctions[0].id, sanction_deleted.id);
 
             let sanctions = conn.get_sanctions(team_id, None).unwrap();
             assert_eq!(sanctions.len(), 0);
