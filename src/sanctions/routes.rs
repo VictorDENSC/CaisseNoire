@@ -91,6 +91,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use chrono::{naive::NaiveDate, Local};
     use serde_json::json;
 
     use super::*;
@@ -185,36 +186,55 @@ mod tests {
     fn test_create_sanction() {
         let team_id = Uuid::new_v4();
 
-        let rule = Rule {
+        let rule_1 = Rule {
             kind: RuleKind::Multiplication {
                 price_to_multiply: 3.5,
             },
             ..Default::default()
         };
 
-        let sanction = json!([{
+        let rule_2 = Rule {
+            id: Uuid::new_v4(),
+            ..Default::default()
+        };
+
+        let created_at = NaiveDate::from_ymd(2019, 10, 16);
+
+        let sanctions = json!([{
             "user_id": Uuid::new_v4(),
             "sanction_info": {
-                "associated_rule": rule.id,
+                "associated_rule": rule_1.id,
                 "extra_info": {
                     "type": "MULTIPLICATION",
                     "factor": 2
                 }
             }
+        },
+        {
+            "user_id": Uuid::new_v4(),
+            "sanction_info": {
+                "associated_rule": rule_2.id,
+                "extra_info": {
+                    "type": "NONE",
+                }
+            },
+            "created_at": created_at
         }]);
 
         let response = json!(handle_request(
-            &RequestBuilder::post(format!("/teams/{}/sanctions", team_id), &sanction),
+            &RequestBuilder::post(format!("/teams/{}/sanctions", team_id), &sanctions),
             &DbMock {
-                teams_db: TeamsDbMock::SuccessWithRule(rule),
+                teams_db: TeamsDbMock::SuccessWithRules(vec![rule_1, rule_2]),
                 ..Default::default()
             },
         )
         .unwrap());
 
         assert_eq!(response[0]["team_id"], json!(team_id));
-        assert_eq!(response[0]["user_id"], sanction[0]["user_id"]);
+        assert_eq!(response[0]["user_id"], sanctions[0]["user_id"]);
         assert_eq!(response[0]["price"], json!(7.0));
+        assert_eq!(response[0]["created_at"], json!(Local::today().naive_utc()));
+        assert_eq!(response[1]["created_at"], json!(created_at));
     }
 
     #[test]
@@ -249,7 +269,7 @@ mod tests {
         let error = handle_request(
             &RequestBuilder::post(format!("/teams/{}/sanctions", team_id), &sanction),
             &DbMock {
-                teams_db: TeamsDbMock::SuccessWithRule(rule),
+                teams_db: TeamsDbMock::SuccessWithRules(vec![rule]),
                 ..Default::default()
             },
         )

@@ -13,6 +13,7 @@ pub struct UpdateSanctionRequest {
     pub id: Option<Uuid>,
     pub user_id: Uuid,
     pub sanction_info: SanctionInfo,
+    pub created_at: Option<NaiveDate>,
 }
 
 impl From<(UpdateSanctionRequest, Uuid, f32)> for CreateSanction {
@@ -25,7 +26,7 @@ impl From<(UpdateSanctionRequest, Uuid, f32)> for CreateSanction {
             team_id,
             sanction_info: update_request.sanction_info,
             price,
-            created_at: None,
+            created_at: update_request.created_at,
         }
     }
 }

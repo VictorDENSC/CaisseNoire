@@ -1,4 +1,4 @@
-use chrono::naive::NaiveDate;
+use chrono::{naive::NaiveDate, Local};
 use uuid::Uuid;
 
 use crate::database::postgres::DbError;
@@ -15,7 +15,7 @@ pub struct DbMock {
 
 pub enum TeamsDbMock {
     Success,
-    SuccessWithRule(Rule),
+    SuccessWithRules(Vec<Rule>),
     NotFound,
     Unknown,
 }
@@ -41,9 +41,9 @@ impl TeamsDb for DbMock {
                 id,
                 ..Default::default()
             }),
-            TeamsDbMock::SuccessWithRule(rule) => Ok(Team {
+            TeamsDbMock::SuccessWithRules(rules) => Ok(Team {
                 id,
-                rules: vec![rule.clone()],
+                rules: rules.clone(),
                 ..Default::default()
             }),
             TeamsDbMock::NotFound => Err(DbError::NotFound),
@@ -203,7 +203,7 @@ impl SanctionsDb for DbMock {
                     price: create_sanction.price,
                     created_at: create_sanction
                         .created_at
-                        .unwrap_or_else(|| NaiveDate::from_ymd(2019, 10, 15)),
+                        .unwrap_or_else(|| Local::today().naive_local()),
                 })
                 .collect()),
             SanctionsDbMock::NotFound => Err(DbError::ForeignKeyViolation(String::from("Error"))),
