@@ -58,6 +58,7 @@ impl SanctionsDb for DbConnection {
 
 #[cfg(test)]
 mod tests {
+    use chrono::Local;
     use diesel::result::Error;
 
     use super::*;
@@ -194,18 +195,30 @@ mod tests {
                 .unwrap()
                 .id;
 
+            let created_at = NaiveDate::from_ymd(2019, 10, 15);
+
             let sanctions = conn
-                .create_sanctions(&[CreateSanction {
-                    id,
-                    user_id,
-                    team_id,
-                    ..Default::default()
-                }])
+                .create_sanctions(&[
+                    CreateSanction {
+                        id,
+                        user_id,
+                        team_id,
+                        ..Default::default()
+                    },
+                    CreateSanction {
+                        user_id,
+                        team_id,
+                        created_at: Some(created_at),
+                        ..Default::default()
+                    },
+                ])
                 .unwrap();
 
             assert_eq!(sanctions[0].id, id);
             assert_eq!(sanctions[0].user_id, user_id);
             assert_eq!(sanctions[0].team_id, team_id);
+            assert_eq!(sanctions[0].created_at, Local::today().naive_local());
+            assert_eq!(sanctions[1].created_at, created_at);
 
             Ok(())
         });
