@@ -1,7 +1,7 @@
 [package]
 name = "caisse_noire"
 version = "0.1.0"
-authors = ["Victor Domecq <vdomecq@ensc.fr>"]
+authors = ["Victor Domecq <vicdomecq@gmail.com>"]
 edition = "2018"
 
 [dependencies]
